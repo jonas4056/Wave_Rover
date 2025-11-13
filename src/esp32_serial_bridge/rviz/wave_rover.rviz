@@ -1,0 +1,56 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane: XY
+      Plane Cell Count: 20
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+    - Class: rviz_default_plugins/Odometry
+      Name: Odom
+      Enabled: true
+      Topic: /odom
+      Shape: Arrow
+    - Class: rviz_default_plugins/Imu
+      Name: IMU
+      Enabled: true
+      Topic: /imu
+      Acceleration: true
+      Axes Length: 0.5
+      Axes Radius: 0.02
+    - Class: rviz_default_plugins/RobotModel
+      Name: Robot
+      Enabled: true
+      Robot Description: robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      TF Prefix: ""
+  Enabled: true
+  Global Options:
+    Fixed Frame: odom
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 5
+      Pitch: 0.785
+      Yaw: 0.785
+Window Geometry:
+  Height: 800
+  Width: 1200
+

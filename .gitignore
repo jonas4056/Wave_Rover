@@ -1,0 +1,7 @@
+# ROS2 workspace folders
+/build
+/install
+/log
+/.vscode
+*.pyc
+__pycache__/
