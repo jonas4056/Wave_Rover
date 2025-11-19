@@ -1,0 +1,19 @@
+[Unit]
+Description=WaveRover startup service
+After=network-online.target dev-esp32.device dev-lidar.device
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=jonas-nano
+Environment="ROS_DOMAIN_ID=7"
+Environment="ROS_LOCALHOST_ONLY=0"
+Environment="RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
+Environment="ROS_DISTRO=humble"
+Environment="AMENT_PREFIX_PATH=/opt/ros/humble:/home/jonas-nano/ros2_ws/install"
+Environment="CMAKE_PREFIX_PATH=/opt/ros/humble:/home/jonas-nano/ros2_ws/install"
+ExecStart=/bin/bash -c 'source /opt/ros/humble/setup.bash && source /home/jonas-nano/ros2_ws/install/setup.bash && /usr/local/bin/start_wave_rover.sh'
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
