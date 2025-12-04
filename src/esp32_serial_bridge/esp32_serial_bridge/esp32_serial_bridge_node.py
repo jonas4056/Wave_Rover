@@ -57,11 +57,25 @@ class WaveRoverBridge(Node):
         self.serial_thread.start()
 
     def cmd_callback(self, msg: Twist):
-        """Send velocity command to robot."""
+        """Send CMD_SPEED_CTRL (T:1) for non-encoder WAVE ROVER control."""
+        MAX_SPEED = 0.5          # firmware PWM full scale
+        MAX_SPEED_ROS = 1.0      # teleop's m/s max
+
+        scale = MAX_SPEED / MAX_SPEED_ROS
+
+        # Differential drive mixing
+        left = (msg.linear.x - msg.angular.z) * scale
+        right = (msg.linear.x + msg.angular.z) * scale
+
+        # Clamp to [-0.5, 0.5]
+        left = max(-MAX_SPEED, min(MAX_SPEED, left))
+        right = max(-MAX_SPEED, min(MAX_SPEED, right))
+
+        # Send JSON
         cmd = {
-            "T": 13,
-            "X": round(msg.linear.x, 3),
-            "Z": round(msg.angular.z, 3)
+            "T": 1,
+            "L": round(left, 3),
+            "R": round(right, 3)
         }
         try:
             self.ser.write((json.dumps(cmd) + '\n').encode())
