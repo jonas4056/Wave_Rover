@@ -13,6 +13,7 @@
   <exec_depend>wave_rover_rc</exec_depend>
   <exec_depend>wave_rover_description</exec_depend>
   <exec_depend>twist_mux</exec_depend>
+  <exec_depend>sllidar_ros2</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
