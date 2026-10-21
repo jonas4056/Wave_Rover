@@ -78,12 +78,12 @@ Een schakelaar op de TX16S dient als noodstop of als overname van de besturing.
 ## Fases
 
 ### Fase 0 – Fundament
-- [ ] Docker en NVIDIA container runtime op de Jetson controleren
-- [ ] Mappenstructuur in de repo: `docker/`, `src/`, `config/`, `docs/`
-- [ ] Dockerfile (`ros:jazzy`) en `docker-compose.yml`
-- [ ] udev-regels voor vaste apparaatnamen (`/dev/esp32`, `/dev/lidar`)
-- [ ] UART op de 40-pin-header vrijmaken voor de Crossfire-ontvanger
-- [ ] Netwerk tussen de Jetson-container en de pc instellen (`ROS_DOMAIN_ID`, zelfde DDS)
+- [x] Docker en NVIDIA container runtime op de Jetson controleren
+- [x] Mappenstructuur in de repo: `docker/`, `src/`, `scripts/`, `docs/`
+- [x] Dockerfile (`ros:jazzy`) en `docker-compose.yml`
+- [ ] udev-regels voor vaste apparaatnamen (`/dev/esp32`, `/dev/lidar`) → bij fase 1/2, als de apparaten aangesloten zijn
+- [x] UART op de 40-pin-header: `/dev/ttyTHS1` is vrij (de console zit op `ttyTCU0`)
+- [x] Netwerk tussen de Jetson-container en de pc instellen (`ROS_DOMAIN_ID`, zelfde DDS)
 
 **Klaar wanneer:** een testtopic dat op de Jetson in de container gepubliceerd wordt,
 zichtbaar is op de pc met `ros2 topic echo`.
@@ -146,6 +146,14 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
 We kiezen kleine, gequantiseerde modellen en meten het geheugengebruik. Blijkt het te
 krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft een
 NVIDIA-GPU.
+
+### Systeeminstellingen op de Jetson (buiten de repo)
+- NVMe-energiebesparing (APST) uit: `nvme_core.default_ps_max_latency_us=0` in
+  `/boot/extlinux/extlinux.conf`. De Silicon Power-SSD (MAXIO MAP1202) viel anders
+  willekeurig weg. Een backup staat in `extlinux.conf.bak`.
+- Energiebesparing van de wifi uit: `/etc/NetworkManager/conf.d/99-wifi-powersave-off.conf`
+- `jonas` zit in de groepen `docker` en `dialout`, en heeft sudo zonder wachtwoord.
+- Pakket `docker-compose-v2` is geïnstalleerd.
 
 ### Doorlopend
 - Automatisch opstarten bij het booten (Docker-herstartbeleid)

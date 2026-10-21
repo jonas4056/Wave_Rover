@@ -1,16 +1,11 @@
-# ROS2 workspace folders
-/build
-/install
-/log
-/.vscode
-*.pyc
+# ROS 2 workspace
+build/
+install/
+log/
+
+# Python
 __pycache__/
-build/
-install/
-log/
-build/
-install/
-log/
-build/
-install/
-log/
+*.pyc
+
+# Editor
+.vscode/

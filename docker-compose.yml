@@ -1,0 +1,25 @@
+# Starten op de Jetson:   docker compose up -d --build
+# Shell in de container:  docker compose exec ros bash
+services:
+  ros:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: wave_rover:dev
+    container_name: wave_rover
+    # Host-netwerk: de pc ziet de ROS-topics rechtstreeks.
+    network_mode: host
+    ipc: host
+    # Volledige toegang tot /dev (USB-serieel, UART, camera); eenvoudig voor een hobbyrobot.
+    privileged: true
+    runtime: nvidia
+    environment:
+      - ROS_DOMAIN_ID=0
+      - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ./:/home/ubuntu/wave_rover
+      - /dev:/dev
+    command: sleep infinity
+    restart: unless-stopped
