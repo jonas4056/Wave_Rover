@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-serial \
         ros-jazzy-demo-nodes-cpp \
         ros-jazzy-demo-nodes-py \
+        ros-jazzy-nav2-bringup \
+        ros-jazzy-navigation2 \
         libeigen3-dev \
         ros-jazzy-robot-state-publisher \
         ros-jazzy-robot-localization \

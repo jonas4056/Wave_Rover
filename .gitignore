@@ -9,3 +9,6 @@ __pycache__/
 
 # Editor
 .vscode/
+
+# Kaarten van de woning: privé, niet op GitHub
+maps/
