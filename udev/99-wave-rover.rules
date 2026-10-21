@@ -1,3 +1,5 @@
 # Vaste apparaatnamen voor de Wave Rover. Installeren: scripts/install_udev.sh
 # ESP32 general driver board (CP2102N); herkend op serienummer omdat de lidar dezelfde chip kan gebruiken.
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="906b9588e87fef11b299241cedd322a4", SYMLINK+="esp32", GROUP="dialout", MODE="0660"
+# RPLidar C1 (CP2102N)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="1ac0602d187fef11b61b201cedd322a4", SYMLINK+="lidar", GROUP="dialout", MODE="0660"

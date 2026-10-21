@@ -1,15 +1,14 @@
 <?xml version="1.0"?>
-<!-- Wave Rover. Chassismaten zijn een schatting: nameten en aanpassen.
-     Posities van lidar, camera en IMU komen uit de legacy-opstelling. -->
+<!-- Wave Rover. Maten nagemeten op 2026-10-21; positie van camera en IMU nog geschat. -->
 <robot name="wave_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:property name="body_length" value="0.23"/>
-  <xacro:property name="body_width" value="0.16"/>
+  <xacro:property name="body_length" value="0.18"/>
+  <xacro:property name="body_width" value="0.17"/>
   <xacro:property name="body_height" value="0.06"/>
   <xacro:property name="wheel_radius" value="0.04"/>
   <xacro:property name="wheel_width" value="0.035"/>
-  <xacro:property name="wheel_base" value="0.12"/>
-  <xacro:property name="track_width" value="0.17"/>
+  <xacro:property name="wheel_base" value="0.10"/>
+  <xacro:property name="track_width" value="0.12"/>
 
   <material name="body"><color rgba="0.15 0.15 0.15 1"/></material>
   <material name="wheel"><color rgba="0.05 0.05 0.05 1"/></material>
@@ -60,7 +59,8 @@
     <origin xyz="0 0 0.01"/>
   </joint>
 
-  <!-- RPLidar C1; frame-naam "laser" is de standaard van rplidar_ros. -->
+  <!-- RPLidar C1; frame-naam "laser" is de standaard van rplidar_ros.
+       Op 70% van de lengte richting achterkant; laser op 20 cm boven de grond. -->
   <link name="laser">
     <visual>
       <geometry><cylinder radius="0.028" length="0.04"/></geometry>
@@ -70,7 +70,7 @@
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser"/>
-    <origin xyz="0.1 0 0.16"/>
+    <origin xyz="${body_length/2 - 0.7*body_length} 0 ${0.20 - wheel_radius}"/>
   </joint>
 
   <link name="camera_link">

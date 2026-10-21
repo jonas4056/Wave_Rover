@@ -1,7 +1,7 @@
 esp32_bridge:
   ros__parameters:
     port: /dev/esp32
-    track_width: 0.17
+    track_width: 0.12
     # Te kalibreren in fase 2: welke snelheid (m/s) haalt de robot bij wielwaarde 0.5?
     speed_at_max_cmd: 1.25
     max_wheel_cmd: 0.5

@@ -40,7 +40,7 @@ class Esp32Bridge(Node):
         self.declare_parameter('port', '/dev/esp32')
         self.declare_parameter('baud', 115200)
         # Breedte tussen linker- en rechterwielen (m).
-        self.declare_parameter('track_width', 0.17)
+        self.declare_parameter('track_width', 0.12)
         # Snelheid (m/s) die overeenkomt met wielwaarde `max_wheel_cmd`; te kalibreren in fase 2.
         self.declare_parameter('speed_at_max_cmd', 1.25)
         self.declare_parameter('max_wheel_cmd', 0.5)
