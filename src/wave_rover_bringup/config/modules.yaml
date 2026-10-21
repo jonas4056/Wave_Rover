@@ -1,0 +1,9 @@
+# Modules die op vraag gestart worden via de module-manager.
+# Starten:  ros2 service call /modules/lidar/enable std_srvs/srv/SetBool "{data: true}"
+# Stoppen:  ros2 service call /modules/lidar/enable std_srvs/srv/SetBool "{data: false}"
+# Status:   ros2 topic echo /modules/status
+modules:
+  lidar:
+    description: RPLidar C1 -> /scan
+    package: wave_rover_bringup
+    launch: lidar.launch.py

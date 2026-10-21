@@ -60,7 +60,8 @@
   </joint>
 
   <!-- RPLidar C1; frame-naam "laser" is de standaard van rplidar_ros.
-       Op 70% van de lengte richting achterkant; laser op 20 cm boven de grond. -->
+       Op 70% van de lengte richting achterkant; laser op 20 cm boven de grond.
+       De lidar is gemonteerd met zijn pijl naar achteren: 180 graden gedraaid. -->
   <link name="laser">
     <visual>
       <geometry><cylinder radius="0.028" length="0.04"/></geometry>
@@ -70,7 +71,7 @@
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser"/>
-    <origin xyz="${body_length/2 - 0.7*body_length} 0 ${0.20 - wheel_radius}"/>
+    <origin xyz="${body_length/2 - 0.7*body_length} 0 ${0.20 - wheel_radius}" rpy="0 0 ${pi}"/>
   </joint>
 
   <link name="camera_link">

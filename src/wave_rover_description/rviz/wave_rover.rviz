@@ -21,12 +21,20 @@ Visualization Manager:
       Enabled: true
       Show Names: true
       Marker Scale: 0.3
-    - Class: rviz_default_plugins/Imu
+    - Class: rviz_imu_plugin/Imu
       Name: Imu
       Enabled: true
       Topic:
         Value: /imu/data_raw
         Reliability Policy: Best Effort
+      Box properties:
+        Enable box: true
+        x_scale: 0.15
+        y_scale: 0.1
+        z_scale: 0.03
+      Axes properties:
+        Enable axes: true
+        Axes scale: 0.2
     - Class: rviz_default_plugins/LaserScan
       Name: LaserScan
       Enabled: true

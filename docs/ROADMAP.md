@@ -100,15 +100,15 @@ zichtbaar is op de pc met `ros2 topic echo`.
 - [x] `wave_rover_base`: nieuwe ESP32-bridge (`/cmd_vel` → `T:1`, met daaruit de IMU, batterijspanning en een watchdog die stopt als er geen commando's meer komen)
 - [x] CRSF-ontvanger → `/joy` → `rc_teleop` → `/cmd_vel` (TBS Mambo, TAER: arm op kanaal 5, snelheid op kanaal 6)
 - [x] `twist_mux` met RC-voorrang; robot stopt bij ontwapenen of verlies van verbinding
-- [ ] URDF van de robot (afmetingen, positie van lidar, camera en IMU) → eerste versie staat er, maten nog nameten
+- [x] URDF van de robot (afmetingen en lidarpositie nagemeten; camera en IMU nog geschat)
 - [x] Alles start met één `docker compose up`, en automatisch bij het booten
 
 **Klaar wanneer:** je met de TX16S vlot rijdt, de robot stopt als de zender uitvalt, en
 je het robotmodel in RViz op de pc ziet.
 
 ### Fase 2 – Lidar en kaart maken
-- [ ] Module-manager: modules starten/stoppen/status via ROS-services (eerste module: lidar)
-- [ ] RPLidar C1 → `/scan`
+- [x] Module-manager: modules starten/stoppen/status via ROS-services (eerste module: lidar)
+- [x] RPLidar C1 → `/scan` (Slamtec `sllidar_ros2`; lidar 180° gedraaid gemonteerd, gecorrigeerd in de URDF)
 - [ ] Lidar-odometrie + IMU → EKF → `/odom`
 - [ ] Kalibratie van `T:1` naar m/s
 - [ ] `slam_toolbox`: handmatig met de TX16S de living rondrijden en een kaart opbouwen

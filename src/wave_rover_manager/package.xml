@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>wave_rover_manager</name>
+  <version>0.1.0</version>
+  <description>Start en stopt modules (lidar, SLAM, navigatie, ...) van de Wave Rover op vraag</description>
+  <maintainer email="jonas_de_clercq49@hotmail.com">Jonas De Clercq</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
