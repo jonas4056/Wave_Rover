@@ -67,7 +67,15 @@ De nieuwe aanpak:
 
 Een schakelaar op de TX16S dient als noodstop of als overname van de besturing.
 
-### 4. Dashboard als webapp
+### 4. Alleen de basis start automatisch
+- **Altijd aan bij het booten:** ESP32-bridge, RC-besturing, twist_mux en robotmodel.
+  Die zijn licht en moeten altijd werken.
+- **Op vraag (modules):** lidar, SLAM, Nav2, camera, beeldherkenning en AI. Ze worden
+  gestart en gestopt via een **module-manager** met een ROS-service per module.
+  Het dashboard roept die services aan. Zo blijven CPU, GPU, geheugen en stroom vrij als
+  de robot stilstaat.
+
+### 5. Dashboard als webapp
 - Een webpagina die op de Jetson draait en via `rosbridge` met ROS praat.
 - Op de iPhone of iPad open je die in Safari en zet je hem met "Zet op beginscherm" als icoon op het beginscherm.
 - Je hebt geen Mac, Xcode of Apple-ontwikkelaarsaccount nodig, en ze werkt ook op oudere iOS-versies.
@@ -99,6 +107,7 @@ zichtbaar is op de pc met `ros2 topic echo`.
 je het robotmodel in RViz op de pc ziet.
 
 ### Fase 2 – Lidar en kaart maken
+- [ ] Module-manager: modules starten/stoppen/status via ROS-services (eerste module: lidar)
 - [ ] RPLidar C1 → `/scan`
 - [ ] Lidar-odometrie + IMU → EKF → `/odom`
 - [ ] Kalibratie van `T:1` naar m/s
