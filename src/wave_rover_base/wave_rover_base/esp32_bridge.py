@@ -39,11 +39,16 @@ class Esp32Bridge(Node):
 
         self.declare_parameter('port', '/dev/esp32')
         self.declare_parameter('baud', 115200)
-        # Breedte tussen linker- en rechterwielen (m).
-        self.declare_parameter('track_width', 0.12)
+        # Effectieve wielafstand (m). Bij skid-steer schuiven de wielen zijdelings bij het
+        # draaien; daardoor is meer verschil tussen links en rechts nodig dan de echte
+        # wielafstand (0,12 m) doet vermoeden.
+        self.declare_parameter('track_width', 0.3)
         # Snelheid (m/s) die overeenkomt met wielwaarde `max_wheel_cmd`; te kalibreren in fase 2.
         self.declare_parameter('speed_at_max_cmd', 1.25)
         self.declare_parameter('max_wheel_cmd', 0.5)
+        # Kleinste wielwaarde waarbij de motoren op gang komen; kleinere commando's
+        # worden lineair geschaald naar [min_wheel_cmd, max_wheel_cmd].
+        self.declare_parameter('min_wheel_cmd', 0.1)
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
@@ -51,6 +56,7 @@ class Esp32Bridge(Node):
         self.track_width = self.get_parameter('track_width').value
         self.speed_at_max_cmd = self.get_parameter('speed_at_max_cmd').value
         self.max_wheel_cmd = self.get_parameter('max_wheel_cmd').value
+        self.min_wheel_cmd = self.get_parameter('min_wheel_cmd').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
         self.imu_frame = self.get_parameter('imu_frame').value
 
@@ -91,12 +97,18 @@ class Esp32Bridge(Node):
         left = msg.linear.x - msg.angular.z * half
         right = msg.linear.x + msg.angular.z * half
 
-        scale = self.max_wheel_cmd / self.speed_at_max_cmd
-        left = max(-self.max_wheel_cmd, min(self.max_wheel_cmd, left * scale))
-        right = max(-self.max_wheel_cmd, min(self.max_wheel_cmd, right * scale))
-
+        left = self.to_wheel_cmd(left)
+        right = self.to_wheel_cmd(right)
         self.send({'T': 1, 'L': round(left, 3), 'R': round(right, 3)})
         self.last_cmd_time = self.get_clock().now()
+
+    def to_wheel_cmd(self, speed):
+        """Wielsnelheid (m/s) -> wielwaarde voor T:1, met minimum om de motoren op gang te krijgen."""
+        cmd = min(self.max_wheel_cmd, abs(speed) * self.max_wheel_cmd / self.speed_at_max_cmd)
+        if cmd < 1e-3:
+            return 0.0
+        cmd = self.min_wheel_cmd + (self.max_wheel_cmd - self.min_wheel_cmd) * cmd / self.max_wheel_cmd
+        return math.copysign(cmd, speed)
 
     def check_cmd_timeout(self):
         if self.last_cmd_time is None:
@@ -139,7 +151,8 @@ class Esp32Bridge(Node):
         msg.angular_velocity.x = math.radians(d['gx'])
         msg.angular_velocity.y = math.radians(d['gy'])
         msg.angular_velocity.z = math.radians(d['gz'])
-        msg.angular_velocity_covariance = [0.0004, 0.0, 0.0, 0.0, 0.0004, 0.0, 0.0, 0.0, 0.0004]
+        # Gemeten ruis bij stilstand: ±3 °/s met pieken tot 16 °/s -> std ~0.1 rad/s.
+        msg.angular_velocity_covariance = [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
         msg.linear_acceleration.x = d['ax'] / 1000.0 * G
         msg.linear_acceleration.y = d['ay'] / 1000.0 * G
         msg.linear_acceleration.z = d['az'] / 1000.0 * G

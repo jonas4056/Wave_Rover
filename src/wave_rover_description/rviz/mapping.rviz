@@ -17,9 +17,11 @@ Visualization Manager:
       Enabled: true
       Topic:
         Value: /odometry/filtered
-      Keep: 50
+      Keep: 20
       Shape:
         Value: Arrow
+      Covariance:
+        Value: false
     - Class: rviz_default_plugins/Grid
       Name: Grid
       Enabled: true

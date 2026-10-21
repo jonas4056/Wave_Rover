@@ -26,7 +26,7 @@ class RcTeleop(Node):
         self.declare_parameter('invert_angular', True)
         self.declare_parameter('deadband', 0.05)
         self.declare_parameter('max_linear', [0.15, 0.3, 0.6])
-        self.declare_parameter('max_angular', [1.0, 2.0, 3.0])
+        self.declare_parameter('max_angular', [1.5, 3.0, 5.0])
 
         self.axis_linear = self.get_parameter('axis_linear').value
         self.axis_angular = self.get_parameter('axis_angular').value
