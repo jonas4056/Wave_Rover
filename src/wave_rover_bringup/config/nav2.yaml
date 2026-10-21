@@ -9,7 +9,9 @@
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
 # Skid-steer rijdt slecht in zachte bochten: bij meer dan ~15 graden afwijking eerst op de
-# plaats draaien (rotate_to_heading_min_angle), en een lange lookahead voor rechte stukken.
+# plaats draaien (rotate_to_heading_min_angle, ~23 graden), en een lange lookahead voor rechte stukken.
+# Draaien wordt meteen afgeremd (max_decel -30): anders schiet de robot voorbij de doelrichting
+# en pendelt hij heen en weer.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
 # volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
 amcl:
@@ -98,7 +100,7 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: nav2_controller::SimpleGoalChecker
-      xy_goal_tolerance: 0.15
+      xy_goal_tolerance: 0.2
       yaw_goal_tolerance: 0.3
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
@@ -111,7 +113,7 @@ controller_server:
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
-      rotate_to_heading_min_angle: 0.25
+      rotate_to_heading_min_angle: 0.4
       rotate_to_heading_angular_vel: 3.0
       max_angular_accel: 50.0
       allow_reversing: false
@@ -139,8 +141,8 @@ local_costmap:
       - inflation_layer
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 6.0
+        inflation_radius: 0.25
       voxel_layer:
         plugin: nav2_costmap_2d::VoxelLayer
         enabled: true
@@ -198,8 +200,8 @@ global_costmap:
         map_subscribe_transient_local: true
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.35
+        cost_scaling_factor: 6.0
+        inflation_radius: 0.25
       always_send_full_costmap: true
       footprint: '[[0.11, 0.1], [0.11, -0.1], [-0.11, -0.1], [-0.11, 0.1]]'
 map_saver:
@@ -314,7 +316,7 @@ velocity_smoother:
     max_decel:
     - -0.8
     - 0.0
-    - -6.0
+    - -30.0
     odom_topic: /odometry/filtered
     odom_duration: 0.1
     deadband_velocity:
