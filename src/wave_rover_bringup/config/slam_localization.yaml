@@ -1,0 +1,31 @@
+slam_toolbox:
+  ros__parameters:
+    # Lokaliseren op een opgeslagen posegraph (de kaart zelf wordt niet meer aangepast).
+    # map_file_name wordt door navigation.launch.py ingevuld.
+    mode: localization
+    # Start op het eerste punt van de kaart (waar het mappen begon); corrigeren kan
+    # met 2D Pose Estimate in RViz (/initialpose).
+    map_start_at_dock: true
+    scan_topic: /scan
+    base_frame: base_footprint
+    odom_frame: odom
+    map_frame: map
+
+    resolution: 0.05
+    max_laser_range: 12.0
+    map_update_interval: 1.0
+    transform_publish_period: 0.05
+
+    # Nieuwe scan verwerken na zoveel beweging (m / rad). Klein houden: de
+    # odometrie zonder encoders is minder nauwkeurig, dus vaker corrigeren met scans.
+    minimum_travel_distance: 0.05
+    minimum_travel_heading: 0.05
+    minimum_time_interval: 0.2
+
+    # Scan matching: ruimer zoeken en fijner vergelijken dan de standaard.
+    correlation_search_space_dimension: 0.6
+    correlation_search_space_resolution: 0.01
+    scan_buffer_size: 15
+
+    use_scan_matching: true
+    do_loop_closing: true

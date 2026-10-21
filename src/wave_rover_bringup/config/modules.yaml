@@ -19,10 +19,10 @@ modules:
     requires: [odometry]
     conflicts: [navigation]
   navigation:
-    description: Autonoom navigeren met Nav2 op een opgeslagen kaart
+    description: Autonoom navigeren met Nav2 op een opgeslagen kaart (lokalisatie met slam_toolbox)
     package: wave_rover_bringup
     launch: navigation.launch.py
     args:
-      map: /home/ubuntu/wave_rover/maps/living_v2.yaml
+      map: /home/ubuntu/wave_rover/maps/living_v2
     requires: [odometry]
     conflicts: [slam]
