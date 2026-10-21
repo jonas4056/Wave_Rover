@@ -109,10 +109,11 @@ je het robotmodel in RViz op de pc ziet.
 ### Fase 2 – Lidar en kaart maken
 - [x] Module-manager: modules starten/stoppen/status via ROS-services (eerste module: lidar)
 - [x] RPLidar C1 → `/scan` (Slamtec `sllidar_ros2`; lidar 180° gedraaid gemonteerd, gecorrigeerd in de URDF)
-- [ ] Lidar-odometrie + IMU → EKF → `/odom`
+- [x] Lidar-odometrie (rf2o) + IMU → EKF → `odom → base_footprint`
 - [ ] Kalibratie van `T:1` naar m/s
-- [ ] `slam_toolbox`: handmatig met de TX16S de living rondrijden en een kaart opbouwen
-- [ ] Kaart opslaan en terug inladen
+- [x] `slam_toolbox`: handmatig de living rondrijden en een kaart opbouwen (op snelheid 1)
+- [x] Kaart opslaan (`living_v2`, op de Jetson in `~/wave_rover/maps`, niet in git)
+- [ ] Lidar steviger bevestigen (M2,5-standoffs) en kaart opnieuw maken
 
 **Klaar wanneer:** er een nette kaart van de living in RViz staat, zonder "dubbele"
 muren.
