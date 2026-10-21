@@ -7,3 +7,13 @@ modules:
     description: RPLidar C1 -> /scan
     package: wave_rover_bringup
     launch: lidar.launch.py
+  odometry:
+    description: Lidar-odometrie + IMU (EKF) -> TF odom -> base_footprint
+    package: wave_rover_bringup
+    launch: odometry.launch.py
+    requires: [lidar]
+  slam:
+    description: Kaart maken met slam_toolbox -> /map
+    package: wave_rover_bringup
+    launch: slam.launch.py
+    requires: [odometry]

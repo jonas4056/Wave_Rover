@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Wave Rover. Maten nagemeten op 2026-10-21; positie van camera en IMU nog geschat. -->
+<!-- Wave Rover. Maten nagemeten op 2026-10-21; positie van de IMU nog geschat. -->
 <robot name="wave_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:property name="body_length" value="0.18"/>
@@ -80,10 +80,11 @@
       <material name="sensor"/>
     </visual>
   </link>
+  <!-- Camera ligt plat op het chassis, in het midden, 4 cm van de voorrand. -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="0.12 0 0.26" rpy="0 0.1745 0"/>
+    <origin xyz="${body_length/2 - 0.04} 0 ${body_height/2 + 0.015}"/>
   </joint>
 
 </robot>

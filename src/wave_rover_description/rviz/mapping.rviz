@@ -1,0 +1,73 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: true
+      Topic:
+        Value: /map
+        Durability Policy: Transient Local
+      Alpha: 0.8
+      Color Scheme: map
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometrie
+      Enabled: true
+      Topic:
+        Value: /odometry/filtered
+      Keep: 50
+      Shape:
+        Value: Arrow
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 0.5
+      Plane Cell Count: 20
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+      Marker Scale: 0.3
+    - Class: rviz_imu_plugin/Imu
+      Name: Imu
+      Enabled: true
+      Topic:
+        Value: /imu/data_raw
+        Reliability Policy: Best Effort
+      Box properties:
+        Enable box: true
+        x_scale: 0.15
+        y_scale: 0.1
+        z_scale: 0.03
+      Axes properties:
+        Enable axes: true
+        Axes scale: 0.2
+    - Class: rviz_default_plugins/LaserScan
+      Name: LaserScan
+      Enabled: true
+      Topic:
+        Value: /scan
+        Reliability Policy: Best Effort
+      Size (m): 0.03
+  Global Options:
+    Fixed Frame: map
+    Background Color: 48; 48; 48
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 6.0
+      Pitch: 1.3
+      Yaw: 0.8
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0.1
