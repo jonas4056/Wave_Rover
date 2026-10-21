@@ -1,0 +1,152 @@
+# Wave Rover – Stappenplan
+
+Doel op lange termijn: een robot die je met spraak iets kan vragen, zoals *"zoek de
+televisie in deze ruimte en vertel me wat je erop ziet"*. Hij moet dan zelf door het huis
+navigeren, kijken, begrijpen en antwoorden. Dat werk gebeurt op de Jetson; daarvoor
+hebben we hem.
+
+Werkwijze: we bouwen fase per fase. Een fase is pas klaar als alle punten onder
+**"Klaar wanneer"** werken. Pas dan beginnen we aan de volgende.
+
+---
+
+## Hardware
+
+| Onderdeel | Details |
+|---|---|
+| Computer | Jetson Orin Nano 8 GB, JetPack 7.2 (L4T R39.2.1, Ubuntu 24.04), NVMe 1 TB |
+| Chassis | [Waveshare WAVE ROVER](https://www.waveshare.com/wiki/WAVE_ROVER), 4WD, **N20-motoren zonder encoders**, max. 1,25 m/s |
+| Motorsturing | ESP32 general driver board, JSON via serieel (115200 baud). `T:1` stuurt de wielsnelheid (−0,5…+0,5), `T:131` zet de feedbackstroom aan. Heeft een **9-assige IMU** en een INA219 voor de batterijspanning. |
+| RC | RadioMaster TX16S → TBS Crossfire Nano RX → UART van de Jetson (CRSF, 420000 baud) |
+| Lidar | Slamtec RPLidar C1 (USB, 460800 baud) |
+| Camera | CSI-camera (Argus) |
+| Spraak (tijdelijk) | Yahboom-spraakbord: herkent alleen vooraf geprogrammeerde woorden |
+| Spraak (later) | USB-microfoon en luidspreker |
+| Visualisatie | Linux-pc met ROS 2 Jazzy (native) en RViz2 |
+| Dashboard | Oude iPhone of iPad |
+
+---
+
+## Belangrijkste keuzes
+
+### 1. ROS 2 Jazzy in Docker op de Jetson
+- NVIDIA's software voor beeldverwerking en AI (Isaac ROS: cuVSLAM, nvblox, TensorRT-modellen)
+  en de meeste AI-modellen voor de Jetson worden als containers geleverd. Isaac ROS 4.6
+  ondersteunt Jazzy en JetPack 7.2 sinds augustus 2026. Voor de Orin Nano is het nog
+  dun gedocumenteerd, en daarom testen we het pas in fase 4.
+- We starten met een eenvoudig `ros:jazzy`-image. In fase 4 kan het basisimage
+  vervangen worden door Isaac ROS zonder dat de rest verandert.
+- Eén `docker-compose.yml` beschrijft alles:
+  - host-netwerk, zodat de pc de ROS-topics rechtstreeks ziet
+  - de USB- en UART-apparaten
+  - de GPU
+  - automatisch herstarten
+- Gaat er iets mis, dan gooi je de container weg en bouw je hem opnieuw. Het
+  JetPack-systeem zelf blijft schoon.
+- De pc blijft native Jazzy draaien. ROS praat over het netwerk, dus dat werkt samen.
+
+### 2. Odometrie zonder encoders
+De motoren hebben geen encoders, dus de robot weet niet hoe ver zijn wielen gedraaid
+hebben. In de oude versie bleef `/odom` daardoor altijd op positie (0,0,0) staan.
+Voor SLAM en Nav2 leek het zo alsof de robot stilstond.
+
+De nieuwe aanpak:
+- **Lidar-odometrie:** de beweging wordt afgeleid uit opeenvolgende lidarscans, met
+  `rf2o_laser_odometry` of KISS-ICP.
+- **Gecombineerd met de IMU** (gyroscoop) in een EKF (`robot_localization`). Dat geeft
+  een stabiele `odom → base_link`.
+- **Snelheden kalibreren:** we meten welke `T:1`-waarde welke snelheid in m/s geeft,
+  zodat Nav2 realistische commando's stuurt.
+
+### 3. RC-zender heeft altijd voorrang
+`twist_mux` kiest welke bron mag rijden. Volgorde van voorrang:
+1. **noodstop**
+2. **TX16S** (handmatig)
+3. **dashboard** (iPhone)
+4. **Nav2** (autonoom)
+
+Een schakelaar op de TX16S dient als noodstop of als overname van de besturing.
+
+### 4. Dashboard als webapp
+- Een webpagina die op de Jetson draait en via `rosbridge` met ROS praat.
+- Op de iPhone of iPad open je die in Safari en zet je hem met "Zet op beginscherm" als icoon op het beginscherm.
+- Je hebt geen Mac, Xcode of Apple-ontwikkelaarsaccount nodig, en ze werkt ook op oudere iOS-versies.
+- Een native app is enkel zinvol als de webapp tekortschiet.
+
+---
+
+## Fases
+
+### Fase 0 – Fundament
+- [ ] Docker en NVIDIA container runtime op de Jetson controleren
+- [ ] Mappenstructuur in de repo: `docker/`, `src/`, `config/`, `docs/`
+- [ ] Dockerfile (`ros:jazzy`) en `docker-compose.yml`
+- [ ] udev-regels voor vaste apparaatnamen (`/dev/esp32`, `/dev/lidar`)
+- [ ] UART op de 40-pin-header vrijmaken voor de Crossfire-ontvanger
+- [ ] Netwerk tussen de Jetson-container en de pc instellen (`ROS_DOMAIN_ID`, zelfde DDS)
+
+**Klaar wanneer:** een testtopic dat op de Jetson in de container gepubliceerd wordt,
+zichtbaar is op de pc met `ros2 topic echo`.
+
+### Fase 1 – Rijden met de TX16S
+- [ ] `wave_rover_base`: nieuwe ESP32-bridge (`/cmd_vel` → `T:1`, met daaruit de IMU, batterijspanning en een watchdog die stopt als er geen commando's meer komen)
+- [ ] CRSF-ontvanger → `/joy` → `/cmd_vel` (we gebruiken wat werkte uit de legacy-versie)
+- [ ] `twist_mux` met noodstop op een schakelaar van de TX16S
+- [ ] URDF van de robot (afmetingen, positie van lidar, camera en IMU)
+- [ ] Alles start met één `docker compose up`
+
+**Klaar wanneer:** je met de TX16S vlot rijdt, de robot stopt als de zender uitvalt, en
+je het robotmodel in RViz op de pc ziet.
+
+### Fase 2 – Lidar en kaart maken
+- [ ] RPLidar C1 → `/scan`
+- [ ] Lidar-odometrie + IMU → EKF → `/odom`
+- [ ] Kalibratie van `T:1` naar m/s
+- [ ] `slam_toolbox`: handmatig met de TX16S de living rondrijden en een kaart opbouwen
+- [ ] Kaart opslaan en terug inladen
+
+**Klaar wanneer:** er een nette kaart van de living in RViz staat, zonder "dubbele"
+muren.
+
+### Fase 3 – Autonoom navigeren
+- [ ] Nav2 instellen voor een robot zonder encoders (lagere snelheden, ruimere toleranties)
+- [ ] Navigeren naar een punt dat je in RViz aanklikt
+- [ ] Autonoom verkennen (`explore_lite`): de robot brengt zelf de ruimte in kaart
+- [ ] Locaties met een naam opslaan ("zetel", "tv", "deur")
+
+**Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
+rijden.
+
+### Fase 4 – Camera en beeldherkenning op de GPU
+- [ ] CSI-camera in de container (Argus op JetPack 7 testen)
+- [ ] Objectdetectie met TensorRT (bv. YOLO) → objecten worden op de kaart aangeduid
+- [ ] Isaac ROS 4.6 op de Orin Nano testen (cuVSLAM en eventueel nvblox voor 3D-obstakels)
+
+**Klaar wanneer:** de robot detecties zoals "tv" en "zetel" in realtime op de kaart
+zet.
+
+### Fase 5 – Dashboard (iPhone/iPad)
+Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
+- [ ] `rosbridge` + webapp op de Jetson
+- [ ] Batterij, status, noodstop, joystick
+- [ ] Kaart met de positie van de robot; tik op de kaart om naartoe te rijden
+- [ ] Knoppen voor functies (kaart maken, naar een locatie rijden, ...)
+
+**Klaar wanneer:** je de robot zonder pc kunt bedienen vanaf de iPhone.
+
+### Fase 6 – Spraak en AI-assistent
+- [ ] Tussenstap: commando's van het Yahboom-bord ("vooruit", "stop", ...) koppelen aan acties
+- [ ] USB-microfoon en luidspreker
+- [ ] Wekwoord → spraakherkenning (Whisper) → taalmodel met "tools" (naar een locatie rijden,
+  rondkijken, een foto beschrijven) → spraak (Piper TTS)
+- [ ] Een beeldtaalmodel (VLM) beantwoordt vragen over wat de camera ziet
+- [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
+
+**Aandachtspunt:** de 8 GB geheugen wordt gedeeld door ROS, Nav2 en de AI-modellen.
+We kiezen kleine, gequantiseerde modellen en meten het geheugengebruik. Blijkt het te
+krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft een
+NVIDIA-GPU.
+
+### Doorlopend
+- Automatisch opstarten bij het booten (Docker-herstartbeleid)
+- Na elke fase de documentatie bijwerken in `docs/`
