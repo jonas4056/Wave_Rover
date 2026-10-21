@@ -22,6 +22,7 @@ setup(
             'initialpose_relay = wave_rover_base.initialpose_relay:main',
             'lidar_odom_fix = wave_rover_base.lidar_odom_fix:main',
             'battery_monitor = wave_rover_base.battery_monitor:main',
+            'yahboom_voice = wave_rover_base.yahboom_voice:main',
         ],
     },
 )

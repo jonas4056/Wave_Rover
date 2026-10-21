@@ -26,3 +26,7 @@ modules:
       map: /home/ubuntu/wave_rover/maps/living_v2
     requires: [odometry]
     conflicts: [slam]
+  voice:
+    description: Yahboom-spraakmodule (commando's, batterijmeldingen, noodstop)
+    package: wave_rover_bringup
+    launch: voice.launch.py
