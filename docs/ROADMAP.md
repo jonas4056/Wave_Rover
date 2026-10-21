@@ -119,13 +119,23 @@ je het robotmodel in RViz op de pc ziet.
 muren.
 
 ### Fase 3 – Autonoom navigeren
-- [ ] Nav2 instellen voor een robot zonder encoders (lagere snelheden, ruimere toleranties)
-- [ ] Navigeren naar een punt dat je in RViz aanklikt
+- [x] Nav2 instellen voor een robot zonder encoders (RPP, op de plaats draaien, lokalisatie met slam_toolbox)
+- [x] Navigeren naar een punt dat je in RViz aanklikt
 - [ ] Autonoom verkennen (`explore_lite`): de robot brengt zelf de ruimte in kaart
 - [ ] Locaties met een naam opslaan ("zetel", "tv", "deur")
 
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
 rijden.
+
+### Openstaand (stand 21-10-2026)
+- [ ] Lidar steviger bevestigen (M2,5-standoffs), daarna kaart `living_v3` maken met de
+      gecorrigeerde odometrie en de navigatie daarop testen
+- [ ] Lidarmotor altijd stoppen bij het uitzetten van de module of het herstarten van de
+      container (stopcommando A5 25 + motorsnelheid 0); nu blijft hij soms draaien
+- [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
+- [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
+- [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
+- [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
 
 ### Fase 4 – Camera en beeldherkenning op de GPU
 - [ ] CSI-camera in de container (Argus op JetPack 7 testen)
@@ -145,7 +155,7 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
 **Klaar wanneer:** je de robot zonder pc kunt bedienen vanaf de iPhone.
 
 ### Fase 6 – Spraak en AI-assistent
-- [ ] Tussenstap: commando's van het Yahboom-bord ("vooruit", "stop", ...) koppelen aan acties
+- [x] Tussenstap: commando's van het Yahboom-bord koppelen aan acties (stop, go ahead, batterijstatus)
 - [ ] USB-microfoon en luidspreker
 - [ ] Wekwoord → spraakherkenning (Whisper) → taalmodel met "tools" (naar een locatie rijden,
   rondkijken, een foto beschrijven) → spraak (Piper TTS)
