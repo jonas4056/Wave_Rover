@@ -3,6 +3,11 @@
 # footprint, Regulated Pure Pursuit (traag: 0,15 m/s) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
 # Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
+# Draaien gebeurt bewust snel (2,5 rad/s gevraagd): een skid-steer moet bij het draaien op de
+# plaats eerst de zijdelingse wrijving overwinnen; de werkelijke draaisnelheid ligt lager.
+# RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
+# blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
+# hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
 # volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
 amcl:
@@ -105,8 +110,8 @@ controller_server:
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
       rotate_to_heading_min_angle: 0.6
-      rotate_to_heading_angular_vel: 1.2
-      max_angular_accel: 2.5
+      rotate_to_heading_angular_vel: 2.5
+      max_angular_accel: 50.0
       allow_reversing: false
       use_collision_detection: true
       max_allowed_time_to_collision_up_to_carrot: 1.0
@@ -249,9 +254,9 @@ behavior_server:
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
-    max_rotational_vel: 1.5
-    min_rotational_vel: 0.6
-    rotational_acc_lim: 3.2
+    max_rotational_vel: 3.0
+    min_rotational_vel: 1.5
+    rotational_acc_lim: 6.0
     enable_stamped_cmd_vel: true
 waypoint_follower:
   ros__parameters:
@@ -295,19 +300,19 @@ velocity_smoother:
     max_velocity:
     - 0.2
     - 0.0
-    - 1.5
+    - 3.0
     min_velocity:
     - -0.2
     - 0.0
-    - -1.5
+    - -3.0
     max_accel:
     - 0.6
     - 0.0
-    - 2.5
+    - 6.0
     max_decel:
     - -0.8
     - 0.0
-    - -3.0
+    - -6.0
     odom_topic: /odometry/filtered
     odom_duration: 0.1
     deadband_velocity:
