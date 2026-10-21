@@ -3,11 +3,13 @@
 # footprint, Regulated Pure Pursuit (traag: 0,15 m/s) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
 # Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
-# Draaien gebeurt bewust snel (2,5 rad/s gevraagd): een skid-steer moet bij het draaien op de
+# Draaien gebeurt bewust snel (3,0 rad/s gevraagd): een skid-steer moet bij het draaien op de
 # plaats eerst de zijdelingse wrijving overwinnen; de werkelijke draaisnelheid ligt lager.
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
+# Skid-steer rijdt slecht in zachte bochten: bij meer dan ~15 graden afwijking eerst op de
+# plaats draaien (rotate_to_heading_min_angle), en een lange lookahead voor rechte stukken.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
 # volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
 amcl:
@@ -101,16 +103,16 @@ controller_server:
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
       desired_linear_vel: 0.15
-      lookahead_dist: 0.4
-      min_lookahead_dist: 0.25
-      max_lookahead_dist: 0.6
+      lookahead_dist: 0.6
+      min_lookahead_dist: 0.4
+      max_lookahead_dist: 0.9
       lookahead_time: 1.5
       use_velocity_scaled_lookahead_dist: false
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
-      rotate_to_heading_min_angle: 0.6
-      rotate_to_heading_angular_vel: 2.5
+      rotate_to_heading_min_angle: 0.25
+      rotate_to_heading_angular_vel: 3.0
       max_angular_accel: 50.0
       allow_reversing: false
       use_collision_detection: true
@@ -254,7 +256,7 @@ behavior_server:
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
-    max_rotational_vel: 3.0
+    max_rotational_vel: 3.6
     min_rotational_vel: 1.5
     rotational_acc_lim: 6.0
     enable_stamped_cmd_vel: true
@@ -300,11 +302,11 @@ velocity_smoother:
     max_velocity:
     - 0.2
     - 0.0
-    - 3.0
+    - 3.6
     min_velocity:
     - -0.2
     - 0.0
-    - -3.0
+    - -3.6
     max_accel:
     - 0.6
     - 0.0
