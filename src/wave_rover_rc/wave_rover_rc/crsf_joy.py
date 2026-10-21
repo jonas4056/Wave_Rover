@@ -4,7 +4,7 @@ Elk van de 16 kanalen wordt een as in Joy.axes, genormaliseerd naar -1…1.
 Kanalen 5–16 (schakelaars) worden ook als knop gepubliceerd: 1 als de as > 0,5.
 
 Valt de verbinding weg (link quality 0 of geen kanaaldata meer), dan wordt er
-geen /joy meer gepubliceerd. teleop en twist_mux stoppen de robot dan vanzelf.
+geen /joy meer gepubliceerd. rc_teleop en twist_mux stoppen de robot dan vanzelf.
 """
 import threading
 import time

@@ -12,7 +12,6 @@
   <exec_depend>wave_rover_base</exec_depend>
   <exec_depend>wave_rover_rc</exec_depend>
   <exec_depend>wave_rover_description</exec_depend>
-  <exec_depend>teleop_twist_joy</exec_depend>
   <exec_depend>twist_mux</exec_depend>
 
   <export>

@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-demo-nodes-cpp \
         ros-jazzy-demo-nodes-py \
         ros-jazzy-robot-state-publisher \
-        ros-jazzy-teleop-twist-joy \
         ros-jazzy-twist-mux \
         ros-jazzy-xacro \
     && rm -rf /var/lib/apt/lists/*

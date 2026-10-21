@@ -13,22 +13,23 @@ crsf_joy:
     port: /dev/ttyTHS1
     baud: 420000
 
-# TX16S (AETR): axes[0] = kanaal 1 (rechterstick links/rechts),
-# axes[1] = kanaal 2 (rechterstick voor/achter), buttons[0] = kanaal 5 (arm-schakelaar).
-# Arm-schakelaar aan = handmatig rijden; uit = robot mag autonoom rijden.
-teleop_twist_joy_node:
+# TBS Mambo (TAER, mode 2). Assen = kanaal - 1.
+#   kanaal 2 = rechterstick links/rechts  -> draaien
+#   kanaal 3 = rechterstick voor/achter   -> vooruit/achteruit
+#   kanaal 5 = arm-schakelaar (boven = handmatig rijden)
+#   kanaal 6 = snelheid (3 standen)
+#   kanaal 8 = vrij voor later
+rc_teleop:
   ros__parameters:
-    publish_stamped_twist: true
-    require_enable_button: true
-    enable_button: 0
-    axis_linear:
-      x: 1
-    scale_linear:
-      x: 0.4
-    axis_angular:
-      yaw: 0
-    scale_angular:
-      yaw: -2.0
+    axis_linear: 2
+    axis_angular: 1
+    axis_arm: 4
+    axis_speed: 5
+    invert_linear: false
+    invert_angular: true
+    deadband: 0.05
+    max_linear: [0.15, 0.3, 0.6]
+    max_angular: [1.0, 2.0, 3.0]
 
 # Hoogste prioriteit wint. De RC-zender gaat altijd voor op dashboard en Nav2.
 twist_mux:

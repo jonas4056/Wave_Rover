@@ -17,7 +17,7 @@ Werkwijze: we bouwen fase per fase. Een fase is pas klaar als alle punten onder
 | Computer | Jetson Orin Nano 8 GB, JetPack 7.2 (L4T R39.2.1, Ubuntu 24.04), NVMe 1 TB |
 | Chassis | [Waveshare WAVE ROVER](https://www.waveshare.com/wiki/WAVE_ROVER), 4WD, **N20-motoren zonder encoders**, max. 1,25 m/s |
 | Motorsturing | ESP32 general driver board, JSON via serieel (115200 baud). `T:1` stuurt de wielsnelheid (−0,5…+0,5), `T:131` zet de feedbackstroom aan. Heeft een **9-assige IMU** en een INA219 voor de batterijspanning. |
-| RC | RadioMaster TX16S → TBS Crossfire Nano RX → UART van de Jetson (CRSF, 420000 baud) |
+| RC | TBS Mambo (of TX16S) → TBS Crossfire Nano RX → UART van de Jetson (`/dev/ttyTHS1`, CRSF, 420000 baud) |
 | Lidar | Slamtec RPLidar C1 (USB, 460800 baud) |
 | Camera | CSI-camera (Argus) |
 | Spraak (tijdelijk) | Yahboom-spraakbord: herkent alleen vooraf geprogrammeerde woorden |
@@ -89,11 +89,11 @@ Een schakelaar op de TX16S dient als noodstop of als overname van de besturing.
 zichtbaar is op de pc met `ros2 topic echo`.
 
 ### Fase 1 – Rijden met de TX16S
-- [ ] `wave_rover_base`: nieuwe ESP32-bridge (`/cmd_vel` → `T:1`, met daaruit de IMU, batterijspanning en een watchdog die stopt als er geen commando's meer komen)
-- [ ] CRSF-ontvanger → `/joy` → `/cmd_vel` (we gebruiken wat werkte uit de legacy-versie)
-- [ ] `twist_mux` met noodstop op een schakelaar van de TX16S
-- [ ] URDF van de robot (afmetingen, positie van lidar, camera en IMU)
-- [ ] Alles start met één `docker compose up`
+- [x] `wave_rover_base`: nieuwe ESP32-bridge (`/cmd_vel` → `T:1`, met daaruit de IMU, batterijspanning en een watchdog die stopt als er geen commando's meer komen)
+- [x] CRSF-ontvanger → `/joy` → `rc_teleop` → `/cmd_vel` (TBS Mambo, TAER: arm op kanaal 5, snelheid op kanaal 6)
+- [x] `twist_mux` met RC-voorrang; robot stopt bij ontwapenen of verlies van verbinding
+- [ ] URDF van de robot (afmetingen, positie van lidar, camera en IMU) → eerste versie staat er, maten nog nameten
+- [x] Alles start met één `docker compose up`, en automatisch bij het booten
 
 **Klaar wanneer:** je met de TX16S vlot rijdt, de robot stopt als de zender uitvalt, en
 je het robotmodel in RViz op de pc ziet.

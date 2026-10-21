@@ -21,5 +21,6 @@ services:
     volumes:
       - ./:/home/ubuntu/wave_rover
       - /dev:/dev
-    command: sleep infinity
+    # Start de robotbasis; na een wijziging: colcon build in de container + docker compose restart.
+    command: ros2 launch wave_rover_bringup base.launch.py
     restart: unless-stopped

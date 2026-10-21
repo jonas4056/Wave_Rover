@@ -1,4 +1,4 @@
-"""Basis van de Wave Rover: ESP32-bridge, RC-zender, teleop, twist_mux en robotmodel."""
+"""Basis van de Wave Rover: ESP32-bridge, RC-zender, twist_mux en robotmodel."""
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.substitutions import PathJoinSubstitution
@@ -27,11 +27,10 @@ def generate_launch_description():
             output='screen',
         ),
         Node(
-            package='teleop_twist_joy',
-            executable='teleop_node',
-            name='teleop_twist_joy_node',
+            package='wave_rover_rc',
+            executable='rc_teleop',
             parameters=[config],
-            remappings=[('cmd_vel', 'cmd_vel_rc')],
+            output='screen',
         ),
         Node(
             package='twist_mux',
