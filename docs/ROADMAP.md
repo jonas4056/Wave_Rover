@@ -23,7 +23,7 @@ Werkwijze: we bouwen fase per fase. Een fase is pas klaar als alle punten onder
 | Spraak (tijdelijk) | Yahboom-spraakbord: herkent alleen vooraf geprogrammeerde woorden |
 | Spraak (later) | USB-microfoon en luidspreker |
 | Visualisatie | Linux-pc met ROS 2 Jazzy (native) en RViz2 |
-| Dashboard | Oude iPhone of iPad |
+| Dashboard | Webapp: iPhone 18 Pro, of een oude iPhone/iPad die op de robot of op tafel ligt |
 
 ---
 
