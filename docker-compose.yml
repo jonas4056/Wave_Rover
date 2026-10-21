@@ -13,6 +13,9 @@ services:
     # Volledige toegang tot /dev (USB-serieel, UART, camera); eenvoudig voor een hobbyrobot.
     privileged: true
     runtime: nvidia
+    # Groep i2c van de Jetson (gid 114), voor de batterijmeting van de UPS op /dev/i2c-7.
+    group_add:
+      - "114"
     environment:
       - ROS_DOMAIN_ID=0
       - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
