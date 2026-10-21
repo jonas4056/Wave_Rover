@@ -2,6 +2,7 @@
 # Aanpassingen: base_footprint als basisframe, /odometry/filtered als odometrie, kleine
 # footprint, Regulated Pure Pursuit (traag: 0,15 m/s) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
+# Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
 # volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
 amcl:
@@ -114,6 +115,7 @@ controller_server:
       regulated_linear_scaling_min_radius: 0.6
       regulated_linear_scaling_min_speed: 0.08
       transform_tolerance: 0.2
+    enable_stamped_cmd_vel: true
 local_costmap:
   local_costmap:
     ros__parameters:
@@ -250,6 +252,7 @@ behavior_server:
     max_rotational_vel: 1.5
     min_rotational_vel: 0.6
     rotational_acc_lim: 3.2
+    enable_stamped_cmd_vel: true
 waypoint_follower:
   ros__parameters:
     loop_rate: 20
@@ -312,6 +315,7 @@ velocity_smoother:
     - 0.0
     - 0.0
     velocity_timeout: 1.0
+    enable_stamped_cmd_vel: true
 collision_monitor:
   ros__parameters:
     base_frame_id: base_footprint
@@ -342,6 +346,7 @@ collision_monitor:
       min_height: 0.15
       max_height: 2.0
       enabled: true
+    enable_stamped_cmd_vel: true
 docking_server:
   ros__parameters:
     controller_frequency: 50.0
@@ -383,6 +388,7 @@ docking_server:
       projection_time: 5.0
       simulation_step: 0.1
       dock_collision_threshold: 0.3
+    enable_stamped_cmd_vel: true
 loopback_simulator:
   ros__parameters:
     base_frame_id: base_footprint

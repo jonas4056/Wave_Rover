@@ -16,10 +16,13 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare('wave_rover_description'), 'launch', 'description.launch.py'])
         ),
+        # Alleen twist_mux mag de motoren aansturen: de bridge luistert naar /cmd_vel_safe.
+        # (Sommige Nav2-nodes, zoals de docking_server, publiceren rechtstreeks op /cmd_vel.)
         Node(
             package='wave_rover_base',
             executable='esp32_bridge',
             parameters=[config],
+            remappings=[('cmd_vel', 'cmd_vel_safe')],
             output='screen',
         ),
         Node(
@@ -38,7 +41,7 @@ def generate_launch_description():
             package='twist_mux',
             executable='twist_mux',
             parameters=[config],
-            remappings=[('cmd_vel_out', 'cmd_vel')],
+            remappings=[('cmd_vel_out', 'cmd_vel_safe')],
         ),
         Node(
             package='wave_rover_manager',
