@@ -19,6 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'esp32_bridge = wave_rover_base.esp32_bridge:main',
+            'initialpose_relay = wave_rover_base.initialpose_relay:main',
         ],
     },
 )

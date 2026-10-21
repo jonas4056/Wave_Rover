@@ -12,11 +12,12 @@ Een module is een launchbestand, beschreven in een YAML-bestand (parameter
         package: wave_rover_bringup
         launch: slam.launch.py
         requires: [lidar]
+        conflicts: [navigation]
 
 Interface (bruikbaar vanaf de terminal en later vanaf het dashboard):
 - service  /modules/<naam>/enable  (std_srvs/SetBool): true = starten, false = stoppen.
-  Bij starten worden de modules uit `requires` eerst gestart; bij stoppen worden
-  de modules die ervan afhangen eerst gestopt.
+  Bij starten worden de modules uit `conflicts` gestopt en die uit `requires` eerst
+  gestart; bij stoppen worden de modules die ervan afhangen eerst gestopt.
 - topic    /modules/status  (std_msgs/String, JSON, transient local):
   {"lidar": {"state": "aan", "description": "..."}, ...}
   Mogelijke states: uit, start, aan, stopt, fout.
@@ -52,6 +53,7 @@ class Module:
         self.launch = spec['launch']
         self.args = [f'{k}:={v}' for k, v in spec.get('args', {}).items()]
         self.requires = list(spec.get('requires', []))
+        self.conflicts = list(spec.get('conflicts', []))
         self.process = None
         self.started_at = 0.0
         self.state = 'uit'
@@ -107,6 +109,9 @@ class ModuleManager(Node):
         if module is None:
             raise RuntimeError(f'Onbekende module: {name}')
 
+        for other in module.conflicts:
+            if other in self.modules:
+                self.stop(other)
         for dep in module.requires:
             self.start(dep, chain + (name,))
 
@@ -176,7 +181,7 @@ class ModuleManager(Node):
     def publish_status(self):
         with self.lock:
             status = {m.name: {'state': m.state, 'description': m.description,
-                               'requires': m.requires}
+                               'requires': m.requires, 'conflicts': m.conflicts}
                       for m in self.modules.values()}
         self.status_pub.publish(String(data=json.dumps(status)))
 

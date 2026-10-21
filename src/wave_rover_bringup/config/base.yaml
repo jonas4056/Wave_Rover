@@ -46,8 +46,9 @@ twist_mux:
         topic: cmd_vel_dashboard
         timeout: 0.5
         priority: 50
+      # Uitgang van Nav2 (collision_monitor). Niet cmd_vel_nav: die naam gebruikt Nav2 intern.
       nav:
-        topic: cmd_vel_nav
+        topic: cmd_vel_nav2
         timeout: 0.5
         priority: 10
     locks:

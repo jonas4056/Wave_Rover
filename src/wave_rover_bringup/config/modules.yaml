@@ -17,3 +17,12 @@ modules:
     package: wave_rover_bringup
     launch: slam.launch.py
     requires: [odometry]
+    conflicts: [navigation]
+  navigation:
+    description: Autonoom navigeren met Nav2 op een opgeslagen kaart
+    package: wave_rover_bringup
+    launch: navigation.launch.py
+    args:
+      map: /home/ubuntu/wave_rover/maps/living_v2.yaml
+    requires: [odometry]
+    conflicts: [slam]
