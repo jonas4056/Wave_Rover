@@ -1,44 +1,23 @@
 # Wave Rover
 
-ROS 2 workspace for the Wave Rover project — an autonomous / manually RC-driven robot platform using:
-- **Jetson Orin Nano**
-- **ESP32 motor controller**
-- **Crossfire RC (TBS Nano RX + TX16S transmitter)**
-- **RPLidar**
-- **RGB camera**
-- **Yahboom speech board**
+ROS 2 workspace voor de Wave Rover: een zelfgebouwde mobiele robot met
 
-This workspace contains **all ROS 2 packages** needed to run the robot and the boot-time startup script/service.
+- **Jetson Orin Nano** (JetPack 7.2, Ubuntu 24.04)
+- **ROS 2 Jazzy** (zowel op de Jetson als op de visualisatie-pc)
+- **ESP32 motorcontroller**
+- **Crossfire RC** (TBS Nano RX + TX16S)
+- **RPLidar C1**
+- **CSI-camera**
+- **Yahboom spraakbord**
 
----
+## Status
 
-## 📦 Packages inside `src/`
+Deze `main`-branch is een nieuwe start op ROS 2 Jazzy. Packages worden één voor één
+opnieuw opgebouwd en getest.
 
-### Core Control
-- `esp32_serial_bridge`  
-  Subscribes to `/cmd_vel`, converts Twist messages to JSON motor commands, and sends them to the ESP32 via serial.
+## Vorige versie (ROS 2 Humble)
 
-- `simple_joy_to_cmd`  
-  Subscribes to `/joy` (Crossfire RC bridge output) and publishes `/cmd_vel` for the ESP32 motor controller.
-  - Left stick: forward/backward → `linear.x`
-  - Right stick: left/right turn → `angular.z`
+De vorige, werkende versie op JetPack 6.2 / ROS 2 Humble is bewaard als:
 
-- `rc_mapping_bringup`  
-  Launch package for RC control, starting:
-    1. `crsf_receiver_node` → `/rc/channels`
-    2. `crsf_to_joy_node` → `/joy`
-    3. `simple_joy_to_cmd_node` → `/cmd_vel`
-
-### Sensors
-- `argus_camera_publisher` — RGB camera node for video streaming or vision tasks.
-- `yahboom_bridge` — Interface to the Yahboom speech board (`/yahboom_command` topic).
-- `ros2_crsf_receiver` — Reads RC stick data directly from Crossfire receiver via UART.
-
----
-
-## 🚀 Installation & Setup
-
-### Clone the workspace
-```bash
-git clone https://github.com/jonas4056/Wave_Rover.git ~/ros2_ws
-cd ~/ros2_ws
+- tag [`humble-legacy`](https://github.com/jonas4056/Wave_Rover/tree/humble-legacy)
+- branch [`legacy/humble`](https://github.com/jonas4056/Wave_Rover/tree/legacy/humble)
