@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-serial \
         ros-jazzy-demo-nodes-cpp \
         ros-jazzy-demo-nodes-py \
+        ros-jazzy-robot-state-publisher \
+        ros-jazzy-teleop-twist-joy \
+        ros-jazzy-twist-mux \
+        ros-jazzy-xacro \
     && rm -rf /var/lib/apt/lists/*
 
 # Werk als gewone gebruiker (uid 1000 = jonas op de Jetson), zodat build/ en

@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!-- Wave Rover. Chassismaten zijn een schatting: nameten en aanpassen.
+     Posities van lidar, camera en IMU komen uit de legacy-opstelling. -->
+<robot name="wave_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="body_length" value="0.23"/>
+  <xacro:property name="body_width" value="0.16"/>
+  <xacro:property name="body_height" value="0.06"/>
+  <xacro:property name="wheel_radius" value="0.04"/>
+  <xacro:property name="wheel_width" value="0.035"/>
+  <xacro:property name="wheel_base" value="0.12"/>
+  <xacro:property name="track_width" value="0.17"/>
+
+  <material name="body"><color rgba="0.15 0.15 0.15 1"/></material>
+  <material name="wheel"><color rgba="0.05 0.05 0.05 1"/></material>
+  <material name="sensor"><color rgba="0.1 0.4 0.9 1"/></material>
+
+  <!-- base_footprint ligt op de grond onder het midden van de robot. -->
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual>
+      <geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry>
+      <material name="body"/>
+    </visual>
+    <collision>
+      <geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry>
+    </collision>
+  </link>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius}"/>
+  </joint>
+
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}_wheel">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="wheel"/>
+      </visual>
+    </link>
+    <joint name="${name}_wheel_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="${x} ${y} 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel name="front_left" x="${wheel_base/2}" y="${track_width/2}"/>
+  <xacro:wheel name="front_right" x="${wheel_base/2}" y="${-track_width/2}"/>
+  <xacro:wheel name="rear_left" x="${-wheel_base/2}" y="${track_width/2}"/>
+  <xacro:wheel name="rear_right" x="${-wheel_base/2}" y="${-track_width/2}"/>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.01"/>
+  </joint>
+
+  <!-- RPLidar C1; frame-naam "laser" is de standaard van rplidar_ros. -->
+  <link name="laser">
+    <visual>
+      <geometry><cylinder radius="0.028" length="0.04"/></geometry>
+      <material name="sensor"/>
+    </visual>
+  </link>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <origin xyz="0.1 0 0.16"/>
+  </joint>
+
+  <link name="camera_link">
+    <visual>
+      <geometry><box size="0.01 0.03 0.03"/></geometry>
+      <material name="sensor"/>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.12 0 0.26" rpy="0 0.1745 0"/>
+  </joint>
+
+</robot>

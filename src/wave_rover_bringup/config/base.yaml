@@ -1,0 +1,54 @@
+esp32_bridge:
+  ros__parameters:
+    port: /dev/esp32
+    track_width: 0.17
+    # Te kalibreren in fase 2: welke snelheid (m/s) haalt de robot bij wielwaarde 0.5?
+    speed_at_max_cmd: 1.25
+    max_wheel_cmd: 0.5
+    cmd_timeout: 0.5
+    imu_rate: 20.0
+
+crsf_joy:
+  ros__parameters:
+    port: /dev/ttyTHS1
+    baud: 420000
+
+# TX16S (AETR): axes[0] = kanaal 1 (rechterstick links/rechts),
+# axes[1] = kanaal 2 (rechterstick voor/achter), buttons[0] = kanaal 5 (arm-schakelaar).
+# Arm-schakelaar aan = handmatig rijden; uit = robot mag autonoom rijden.
+teleop_twist_joy_node:
+  ros__parameters:
+    publish_stamped_twist: true
+    require_enable_button: true
+    enable_button: 0
+    axis_linear:
+      x: 1
+    scale_linear:
+      x: 0.4
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: -2.0
+
+# Hoogste prioriteit wint. De RC-zender gaat altijd voor op dashboard en Nav2.
+twist_mux:
+  ros__parameters:
+    use_stamped: true
+    topics:
+      rc:
+        topic: cmd_vel_rc
+        timeout: 0.5
+        priority: 100
+      dashboard:
+        topic: cmd_vel_dashboard
+        timeout: 0.5
+        priority: 50
+      nav:
+        topic: cmd_vel_nav
+        timeout: 0.5
+        priority: 10
+    locks:
+      e_stop:
+        topic: e_stop
+        timeout: 0.0
+        priority: 255
