@@ -1,6 +1,6 @@
 # Nav2-parameters voor de Wave Rover, gebaseerd op nav2_bringup/params/nav2_params.yaml (Jazzy).
 # Aanpassingen: base_footprint als basisframe, /odometry/filtered als odometrie, kleine
-# footprint, Regulated Pure Pursuit (traag: 0,15 m/s) en AMCL afgestemd op odometrie
+# footprint, Regulated Pure Pursuit (0,20 m/s, niet afremmen in bochten) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
 # Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
 # Draaien gebeurt bewust snel (3,0 rad/s gevraagd): een skid-steer moet bij het draaien op de
@@ -8,7 +8,7 @@
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
-# Bochten rijden kan sinds de bridge de verhouding links/rechts behoudt; pas vanaf ~40 graden
+# Bochten rijden kan sinds de bridge de verhouding links/rechts behoudt; pas vanaf ~60 graden
 # afwijking eerst op de plaats draaien (rotate_to_heading_min_angle).
 # Draaien wordt meteen afgeremd (max_decel -30): anders schiet de robot voorbij de doelrichting
 # en pendelt hij heen en weer.
@@ -104,22 +104,22 @@ controller_server:
       yaw_goal_tolerance: 0.3
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
-      desired_linear_vel: 0.15
-      lookahead_dist: 0.6
-      min_lookahead_dist: 0.4
-      max_lookahead_dist: 0.9
+      desired_linear_vel: 0.2
+      lookahead_dist: 0.7
+      min_lookahead_dist: 0.5
+      max_lookahead_dist: 1.0
       lookahead_time: 1.5
       use_velocity_scaled_lookahead_dist: false
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
-      rotate_to_heading_min_angle: 0.7
+      rotate_to_heading_min_angle: 1.05
       rotate_to_heading_angular_vel: 3.0
       max_angular_accel: 50.0
       allow_reversing: false
       use_collision_detection: true
       max_allowed_time_to_collision_up_to_carrot: 1.0
-      use_regulated_linear_velocity_scaling: true
+      use_regulated_linear_velocity_scaling: false
       use_cost_regulated_linear_velocity_scaling: false
       regulated_linear_scaling_min_radius: 0.6
       regulated_linear_scaling_min_speed: 0.08
@@ -302,11 +302,11 @@ velocity_smoother:
     scale_velocities: false
     feedback: OPEN_LOOP
     max_velocity:
-    - 0.2
+    - 0.25
     - 0.0
     - 3.6
     min_velocity:
-    - -0.2
+    - -0.25
     - 0.0
     - -3.6
     max_accel:
