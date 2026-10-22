@@ -13,6 +13,10 @@ Een module is een launchbestand, beschreven in een YAML-bestand (parameter
         launch: slam.launch.py
         requires: [lidar]
         conflicts: [navigation]
+        on_stop: [ros2, run, wave_rover_base, lidar_stop]
+
+`on_stop` is een commando dat na het stoppen van de module wordt uitgevoerd, ook na
+een crash, en eenmaal bij het opstarten van de manager (opruimen na een herstart).
 
 Interface (bruikbaar vanaf de terminal en later vanaf het dashboard):
 - service  /modules/<naam>/enable  (std_srvs/SetBool): true = starten, false = stoppen.
@@ -54,6 +58,7 @@ class Module:
         self.args = [f'{k}:={v}' for k, v in spec.get('args', {}).items()]
         self.requires = list(spec.get('requires', []))
         self.conflicts = list(spec.get('conflicts', []))
+        self.on_stop = list(spec.get('on_stop', []))
         self.process = None
         self.started_at = 0.0
         self.state = 'uit'
@@ -79,6 +84,8 @@ class ModuleManager(Node):
             self.create_service(SetBool, f'modules/{name}/enable',
                                 lambda req, resp, n=name: self.on_enable(n, req, resp))
 
+        for module in self.modules.values():
+            self.run_on_stop(module)
         self.create_timer(1.0, self.update_states)
         self.get_logger().info(f'Modules: {", ".join(self.modules)}')
         self.publish_status()
@@ -151,8 +158,19 @@ class ModuleManager(Node):
             os.killpg(pgid, signal.SIGKILL)
             process.wait()
 
+        self.run_on_stop(module)
         with self.lock:
             module.state = 'uit'
+
+    def run_on_stop(self, module):
+        if not module.on_stop:
+            return
+        try:
+            result = subprocess.run(module.on_stop, capture_output=True, text=True, timeout=15)
+            output = (result.stdout + result.stderr).strip()
+            self.get_logger().info(f'on_stop {module.name}: {output or result.returncode}')
+        except (OSError, subprocess.TimeoutExpired) as e:
+            self.get_logger().warn(f'on_stop {module.name} mislukt: {e}')
 
     def stop_all(self):
         for name in self.modules:
@@ -174,6 +192,7 @@ class ModuleManager(Node):
                     self.get_logger().error(
                         f'{module.name} is gestopt met code {process.returncode}; '
                         f'zie {self.log_dir}/{module.name}.log')
+                    threading.Thread(target=self.run_on_stop, args=(module,), daemon=True).start()
                     changed = True
         if changed:
             self.publish_status()

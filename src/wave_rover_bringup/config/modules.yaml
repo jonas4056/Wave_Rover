@@ -7,6 +7,8 @@ modules:
     description: RPLidar C1 -> /scan
     package: wave_rover_bringup
     launch: lidar.launch.py
+    # De C1 blijft draaien als de driver abrupt stopt: motor altijd expliciet stilzetten.
+    on_stop: [ros2, run, wave_rover_base, lidar_stop]
   odometry:
     description: Lidar-odometrie + IMU (EKF) -> TF odom -> base_footprint
     package: wave_rover_bringup

@@ -130,8 +130,8 @@ rijden.
 ### Openstaand (stand 21-10-2026)
 - [ ] Lidar steviger bevestigen (M2,5-standoffs), daarna kaart `living_v3` maken met de
       gecorrigeerde odometrie en de navigatie daarop testen
-- [ ] Lidarmotor altijd stoppen bij het uitzetten van de module of het herstarten van de
-      container (stopcommando A5 25 + motorsnelheid 0); nu blijft hij soms draaien
+- [x] Lidarmotor altijd stoppen bij het uitzetten van de module, een crash of het herstarten
+      van de container (`on_stop` in de module-manager + `lidar_stop`)
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt

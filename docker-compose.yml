@@ -29,4 +29,5 @@ services:
       - /dev:/dev
     # Start de robotbasis; na een wijziging: colcon build in de container + docker compose restart.
     command: ros2 launch wave_rover_bringup base.launch.py
-    restart: unless-stopped
+    # always: ook na een handmatige "docker compose stop" start de robot bij het booten weer op.
+    restart: always
