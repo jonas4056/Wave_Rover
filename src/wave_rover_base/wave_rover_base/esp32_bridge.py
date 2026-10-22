@@ -49,6 +49,9 @@ class Esp32Bridge(Node):
         # Kleinste wielwaarde waarbij de motoren op gang komen; kleinere commando's
         # worden lineair geschaald naar [min_wheel_cmd, max_wheel_cmd].
         self.declare_parameter('min_wheel_cmd', 0.1)
+        # Skid-steer heeft in bochten meer kracht nodig (de wielen schuiven zijdelings):
+        # het minimum loopt op tot deze waarde naarmate de bocht scherper is.
+        self.declare_parameter('min_turn_wheel_cmd', 0.25)
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
@@ -57,6 +60,7 @@ class Esp32Bridge(Node):
         self.speed_at_max_cmd = self.get_parameter('speed_at_max_cmd').value
         self.max_wheel_cmd = self.get_parameter('max_wheel_cmd').value
         self.min_wheel_cmd = self.get_parameter('min_wheel_cmd').value
+        self.min_turn_wheel_cmd = self.get_parameter('min_turn_wheel_cmd').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
         self.imu_frame = self.get_parameter('imu_frame').value
 
@@ -104,18 +108,22 @@ class Esp32Bridge(Node):
     def to_wheel_cmds(self, left, right):
         """Wielsnelheden (m/s) -> wielwaarden voor T:1.
 
-        Het snelste wiel krijgt minstens `min_wheel_cmd` om de motoren op gang te krijgen.
-        Beide wielen worden met dezelfde factor geschaald, zodat de verhouding links/rechts,
-        en dus de bochtstraal, behouden blijft.
+        Het snelste wiel krijgt minstens een minimum om de motoren op gang te krijgen:
+        `min_wheel_cmd` rechtdoor, oplopend tot `min_turn_wheel_cmd` in een scherpe bocht of
+        bij draaien op de plaats. Beide wielen worden met dezelfde factor geschaald, zodat de
+        verhouding links/rechts, en dus de bochtstraal, behouden blijft.
         """
         scale = self.max_wheel_cmd / self.speed_at_max_cmd
         left, right = left * scale, right * scale
         fastest = max(abs(left), abs(right))
         if fastest < 1e-3:
             return 0.0, 0.0
+        # 0 = rechtdoor, 1 = één wiel staat stil, 2 = draaien op de plaats.
+        turn = abs(left - right) / fastest
+        minimum = (self.min_wheel_cmd
+                   + (self.min_turn_wheel_cmd - self.min_wheel_cmd) * min(1.0, turn))
         fastest_cmd = min(self.max_wheel_cmd, fastest)
-        fastest_cmd = (self.min_wheel_cmd
-                       + (self.max_wheel_cmd - self.min_wheel_cmd) * fastest_cmd / self.max_wheel_cmd)
+        fastest_cmd = minimum + (self.max_wheel_cmd - minimum) * fastest_cmd / self.max_wheel_cmd
         factor = fastest_cmd / fastest
         return left * factor, right * factor
 
