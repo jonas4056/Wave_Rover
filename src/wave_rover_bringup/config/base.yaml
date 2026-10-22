@@ -8,6 +8,7 @@ esp32_bridge:
     max_wheel_cmd: 0.5
     min_wheel_cmd: 0.1
     min_turn_wheel_cmd: 0.25
+    min_spin_wheel_cmd: 0.17
     cmd_timeout: 0.5
     imu_rate: 20.0
 

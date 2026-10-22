@@ -52,6 +52,8 @@ class Esp32Bridge(Node):
         # Skid-steer heeft in bochten meer kracht nodig (de wielen schuiven zijdelings):
         # het minimum loopt op tot deze waarde naarmate de bocht scherper is.
         self.declare_parameter('min_turn_wheel_cmd', 0.25)
+        # Minimum bij draaien op de plaats: lager, anders draait de robot te snel voor lidar/IMU.
+        self.declare_parameter('min_spin_wheel_cmd', 0.17)
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
@@ -61,6 +63,7 @@ class Esp32Bridge(Node):
         self.max_wheel_cmd = self.get_parameter('max_wheel_cmd').value
         self.min_wheel_cmd = self.get_parameter('min_wheel_cmd').value
         self.min_turn_wheel_cmd = self.get_parameter('min_turn_wheel_cmd').value
+        self.min_spin_wheel_cmd = self.get_parameter('min_spin_wheel_cmd').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
         self.imu_frame = self.get_parameter('imu_frame').value
 
@@ -109,8 +112,8 @@ class Esp32Bridge(Node):
         """Wielsnelheden (m/s) -> wielwaarden voor T:1.
 
         Het snelste wiel krijgt minstens een minimum om de motoren op gang te krijgen:
-        `min_wheel_cmd` rechtdoor, oplopend tot `min_turn_wheel_cmd` in een scherpe bocht of
-        bij draaien op de plaats. Beide wielen worden met dezelfde factor geschaald, zodat de
+        `min_wheel_cmd` rechtdoor, oplopend tot `min_turn_wheel_cmd` in een scherpe bocht
+        (één wiel stil) en `min_spin_wheel_cmd` bij draaien op de plaats. Beide wielen worden met dezelfde factor geschaald, zodat de
         verhouding links/rechts, en dus de bochtstraal, behouden blijft.
         """
         scale = self.max_wheel_cmd / self.speed_at_max_cmd
@@ -120,8 +123,11 @@ class Esp32Bridge(Node):
             return 0.0, 0.0
         # 0 = rechtdoor, 1 = één wiel staat stil, 2 = draaien op de plaats.
         turn = abs(left - right) / fastest
-        minimum = (self.min_wheel_cmd
-                   + (self.min_turn_wheel_cmd - self.min_wheel_cmd) * min(1.0, turn))
+        if turn <= 1.0:
+            minimum = self.min_wheel_cmd + (self.min_turn_wheel_cmd - self.min_wheel_cmd) * turn
+        else:
+            minimum = (self.min_turn_wheel_cmd
+                       + (self.min_spin_wheel_cmd - self.min_turn_wheel_cmd) * min(1.0, turn - 1.0))
         fastest_cmd = min(self.max_wheel_cmd, fastest)
         fastest_cmd = minimum + (self.max_wheel_cmd - minimum) * fastest_cmd / self.max_wheel_cmd
         factor = fastest_cmd / fastest

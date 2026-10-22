@@ -1,9 +1,9 @@
 # Nav2-parameters voor de Wave Rover, gebaseerd op nav2_bringup/params/nav2_params.yaml (Jazzy).
 # Aanpassingen: base_footprint als basisframe, /odometry/filtered als odometrie, kleine
-# footprint, Regulated Pure Pursuit (0,20 m/s, niet afremmen in bochten) en AMCL afgestemd op odometrie
+# footprint, Regulated Pure Pursuit (0,28 m/s, niet afremmen in bochten) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
 # Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
-# Draaien gebeurt bewust snel (3,0 rad/s gevraagd): een skid-steer moet bij het draaien op de
+# Draaien gebeurt bewust snel (2,0 rad/s gevraagd): een skid-steer moet bij het draaien op de
 # plaats eerst de zijdelingse wrijving overwinnen; de werkelijke draaisnelheid ligt lager.
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
@@ -104,7 +104,7 @@ controller_server:
       yaw_goal_tolerance: 0.3
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
-      desired_linear_vel: 0.2
+      desired_linear_vel: 0.28
       lookahead_dist: 0.7
       min_lookahead_dist: 0.5
       max_lookahead_dist: 1.0
@@ -114,7 +114,7 @@ controller_server:
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
       rotate_to_heading_min_angle: 1.05
-      rotate_to_heading_angular_vel: 3.0
+      rotate_to_heading_angular_vel: 2.0
       max_angular_accel: 50.0
       allow_reversing: false
       use_collision_detection: true
@@ -258,7 +258,7 @@ behavior_server:
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
-    max_rotational_vel: 3.6
+    max_rotational_vel: 2.5
     min_rotational_vel: 1.5
     rotational_acc_lim: 6.0
     enable_stamped_cmd_vel: true
@@ -302,13 +302,13 @@ velocity_smoother:
     scale_velocities: false
     feedback: OPEN_LOOP
     max_velocity:
-    - 0.25
+    - 0.3
     - 0.0
-    - 3.6
+    - 2.5
     min_velocity:
-    - -0.25
+    - -0.3
     - 0.0
-    - -3.6
+    - -2.5
     max_accel:
     - 0.6
     - 0.0
