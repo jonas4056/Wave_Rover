@@ -97,18 +97,27 @@ class Esp32Bridge(Node):
         left = msg.linear.x - msg.angular.z * half
         right = msg.linear.x + msg.angular.z * half
 
-        left = self.to_wheel_cmd(left)
-        right = self.to_wheel_cmd(right)
+        left, right = self.to_wheel_cmds(left, right)
         self.send({'T': 1, 'L': round(left, 3), 'R': round(right, 3)})
         self.last_cmd_time = self.get_clock().now()
 
-    def to_wheel_cmd(self, speed):
-        """Wielsnelheid (m/s) -> wielwaarde voor T:1, met minimum om de motoren op gang te krijgen."""
-        cmd = min(self.max_wheel_cmd, abs(speed) * self.max_wheel_cmd / self.speed_at_max_cmd)
-        if cmd < 1e-3:
-            return 0.0
-        cmd = self.min_wheel_cmd + (self.max_wheel_cmd - self.min_wheel_cmd) * cmd / self.max_wheel_cmd
-        return math.copysign(cmd, speed)
+    def to_wheel_cmds(self, left, right):
+        """Wielsnelheden (m/s) -> wielwaarden voor T:1.
+
+        Het snelste wiel krijgt minstens `min_wheel_cmd` om de motoren op gang te krijgen.
+        Beide wielen worden met dezelfde factor geschaald, zodat de verhouding links/rechts,
+        en dus de bochtstraal, behouden blijft.
+        """
+        scale = self.max_wheel_cmd / self.speed_at_max_cmd
+        left, right = left * scale, right * scale
+        fastest = max(abs(left), abs(right))
+        if fastest < 1e-3:
+            return 0.0, 0.0
+        fastest_cmd = min(self.max_wheel_cmd, fastest)
+        fastest_cmd = (self.min_wheel_cmd
+                       + (self.max_wheel_cmd - self.min_wheel_cmd) * fastest_cmd / self.max_wheel_cmd)
+        factor = fastest_cmd / fastest
+        return left * factor, right * factor
 
     def check_cmd_timeout(self):
         if self.last_cmd_time is None:

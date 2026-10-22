@@ -8,8 +8,8 @@
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
-# Skid-steer rijdt slecht in zachte bochten: bij meer dan ~15 graden afwijking eerst op de
-# plaats draaien (rotate_to_heading_min_angle, ~23 graden), en een lange lookahead voor rechte stukken.
+# Bochten rijden kan sinds de bridge de verhouding links/rechts behoudt; pas vanaf ~40 graden
+# afwijking eerst op de plaats draaien (rotate_to_heading_min_angle).
 # Draaien wordt meteen afgeremd (max_decel -30): anders schiet de robot voorbij de doelrichting
 # en pendelt hij heen en weer.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
@@ -113,7 +113,7 @@ controller_server:
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
-      rotate_to_heading_min_angle: 0.4
+      rotate_to_heading_min_angle: 0.7
       rotate_to_heading_angular_vel: 3.0
       max_angular_accel: 50.0
       allow_reversing: false
