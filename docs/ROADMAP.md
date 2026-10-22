@@ -132,6 +132,10 @@ rijden.
       gecorrigeerde odometrie en de navigatie daarop testen
 - [x] Lidarmotor altijd stoppen bij het uitzetten van de module, een crash of het herstarten
       van de container (`on_stop` in de module-manager + `lidar_stop`)
+- [x] Kaart `living_v3` (stevige lidar + gecorrigeerde odometrie); navigatie werkt erop
+- [ ] Kalibratie draaisnelheid: de robot draait maar 25-50% van wat gevraagd wordt
+      (skid-steer zonder encoders). Meten met scripts/turn_check.py en corrigeren in de
+      bridge, zodat Nav2 vloeiender bochten rijdt (daarna eventueel MPPI opnieuw proberen)
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
