@@ -50,7 +50,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'map', default_value='/home/ubuntu/wave_rover/maps/living_v2',
+            'map', default_value='/home/ubuntu/wave_rover/maps/living_v3',
             description='Opgeslagen kaart (posegraph van slam_toolbox), zonder extensie'),
         localization,
         configure,

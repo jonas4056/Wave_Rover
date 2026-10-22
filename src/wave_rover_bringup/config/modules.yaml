@@ -25,7 +25,7 @@ modules:
     package: wave_rover_bringup
     launch: navigation.launch.py
     args:
-      map: /home/ubuntu/wave_rover/maps/living_v2
+      map: /home/ubuntu/wave_rover/maps/living_v3
     requires: [odometry]
     conflicts: [slam]
   voice:
