@@ -18,5 +18,9 @@ def generate_launch_description():
                 'angle_compensate': True,
             }],
             output='screen',
+            # De C1 geeft soms een time-out (80008004) bij het verbinden vlak na een stop:
+            # dan gewoon opnieuw proberen.
+            respawn=True,
+            respawn_delay=2.0,
         ),
     ])

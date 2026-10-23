@@ -55,9 +55,10 @@ class Esp32Bridge(Node):
         # Minimum bij draaien op de plaats: lager, anders draait de robot te snel voor lidar/IMU.
         self.declare_parameter('min_spin_wheel_cmd', 0.17)
         # Correctie van de draaisnelheid, gemeten met scripts/calibrate_motion.py: de robot
-        # draait zonder correctie ~60% van wat gevraagd wordt op de plaats en ~86% in een bocht.
+        # draait zonder correctie ~60% van wat gevraagd wordt op de plaats. In bochten draait hij
+        # door het bochtduwtje (min_turn_wheel_cmd) al voldoende of te veel.
         self.declare_parameter('spin_gain', 1.6)
-        self.declare_parameter('curve_gain', 1.15)
+        self.declare_parameter('curve_gain', 0.9)
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
@@ -120,8 +121,9 @@ class Esp32Bridge(Node):
         total = abs(forward) + abs(turn)
         if total < 1e-6:
             return 1.0
-        straightness = abs(forward) / total
-        return self.curve_gain * straightness + self.spin_gain * (1.0 - straightness)
+        # Kwadratisch: de grote correctie geldt pas bij (bijna) zuiver draaien op de plaats.
+        spin = (abs(turn) / total) ** 2
+        return self.curve_gain * (1.0 - spin) + self.spin_gain * spin
 
     def to_wheel_cmds(self, left, right):
         """Wielsnelheden (m/s) -> wielwaarden voor T:1.

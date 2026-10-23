@@ -11,7 +11,7 @@ esp32_bridge:
     min_spin_wheel_cmd: 0.17
     # Draaicorrectie (gemeten 23-10-2026 met scripts/calibrate_motion.py)
     spin_gain: 1.6
-    curve_gain: 1.15
+    curve_gain: 0.9
     cmd_timeout: 0.5
     imu_rate: 20.0
 
