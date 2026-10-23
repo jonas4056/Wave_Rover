@@ -47,6 +47,25 @@
     </section>
 
     <section class="card">
+      <div class="card-head">
+        <h2>Kaart</h2>
+        <span id="nav-status" class="nav-status">geen kaart</span>
+      </div>
+      <div class="map-tools" role="group" aria-label="Kaartmodus">
+        <button type="button" data-mode="pan" class="active">Verplaats</button>
+        <button type="button" data-mode="goal">Doel</button>
+        <button type="button" data-mode="initial">Startpositie</button>
+        <button type="button" id="nav-cancel" class="danger">Stop</button>
+      </div>
+      <div class="map-wrap">
+        <canvas id="map"></canvas>
+        <button type="button" id="map-fit" class="map-fit" aria-label="Kaart passend maken">⤢</button>
+      </div>
+      <p class="hint" id="map-hint">Eén vinger verschuift, twee vingers zoomen.
+        Kies "Doel" of "Startpositie" en tik op de kaart; sleep voor de richting.</p>
+    </section>
+
+    <section class="card">
       <h2>Rijden</h2>
       <div class="speed" role="group" aria-label="Snelheid">
         <button type="button" data-speed="0" class="active">1</button>
@@ -67,6 +86,7 @@
   </main>
 
   <script src="roslib.min.js"></script>
+  <script src="map.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

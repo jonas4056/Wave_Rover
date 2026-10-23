@@ -1,0 +1,317 @@
+// Kaart in het dashboard: /map, /robot_pose en /plan tekenen; doel en startpositie zetten.
+// Wordt gestart vanuit app.js met MapView.start(ros) na elke (her)verbinding.
+'use strict';
+
+const MapView = (() => {
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+  const statusEl = document.getElementById('nav-status');
+
+  // Kleuren (donker thema): onbekend, vrij, bezet.
+  const COLOR_UNKNOWN = [43, 55, 73];
+  const COLOR_FREE = [201, 211, 223];
+  const COLOR_OCCUPIED = [11, 15, 21];
+
+  // Goal-statussen van action_msgs/GoalStatus.
+  const NAV_STATUS = { 1: 'onderweg', 2: 'onderweg', 3: 'annuleren…', 4: 'aangekomen', 5: 'geannuleerd', 6: 'opgegeven' };
+
+  let ros = null;
+  let mapInfo = null;      // resolution, width, height, origin
+  let mapImage = null;     // offscreen canvas met de kaart (1 pixel per cel)
+  let robot = null;        // {x, y, yaw}
+  let plan = [];           // [{x, y}]
+  let view = { scale: 40, cx: 0, cy: 0 };  // pixels per meter, wereldpunt in het midden
+  let mode = 'pan';
+  let dirty = true;
+  let fitted = false;
+
+  // Publishers/services, opnieuw aangemaakt bij elke verbinding.
+  let goalTopic = null;
+  let initialTopic = null;
+  let cancelService = null;
+
+  // --- coördinaten ------------------------------------------------------------------
+
+  function size() {
+    return { w: canvas.clientWidth, h: canvas.clientHeight };
+  }
+
+  function worldToScreen(x, y) {
+    const { w, h } = size();
+    return { x: w / 2 + (x - view.cx) * view.scale, y: h / 2 - (y - view.cy) * view.scale };
+  }
+
+  function screenToWorld(sx, sy) {
+    const { w, h } = size();
+    return { x: view.cx + (sx - w / 2) / view.scale, y: view.cy - (sy - h / 2) / view.scale };
+  }
+
+  function yawFromQuaternion(q) {
+    return Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+  }
+
+  function quaternionFromYaw(yaw) {
+    return { x: 0, y: 0, z: Math.sin(yaw / 2), w: Math.cos(yaw / 2) };
+  }
+
+  // --- data -------------------------------------------------------------------------
+
+  function onMap(msg) {
+    const { width, height, resolution, origin } = msg.info;
+    mapInfo = { width, height, resolution, ox: origin.position.x, oy: origin.position.y };
+    const off = document.createElement('canvas');
+    off.width = width;
+    off.height = height;
+    const img = off.getContext('2d').createImageData(width, height);
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const v = msg.data[row * width + col];
+        const c = v < 0 ? COLOR_UNKNOWN : v >= 65 ? COLOR_OCCUPIED : COLOR_FREE;
+        // Rij 0 van de kaart ligt onderaan (kleinste y): verticaal spiegelen.
+        const i = ((height - 1 - row) * width + col) * 4;
+        img.data[i] = c[0];
+        img.data[i + 1] = c[1];
+        img.data[i + 2] = c[2];
+        img.data[i + 3] = 255;
+      }
+    }
+    off.getContext('2d').putImageData(img, 0, 0);
+    mapImage = off;
+    if (!fitted) fit();
+    if (statusEl.textContent === 'geen kaart') statusEl.textContent = 'klaar';
+    dirty = true;
+  }
+
+  function onPose(msg) {
+    robot = { x: msg.pose.position.x, y: msg.pose.position.y, yaw: yawFromQuaternion(msg.pose.orientation) };
+    dirty = true;
+  }
+
+  function onPlan(msg) {
+    plan = msg.poses.map((p) => ({ x: p.pose.position.x, y: p.pose.position.y }));
+    dirty = true;
+  }
+
+  function onNavStatus(msg) {
+    if (!msg.status_list.length) return;
+    const last = msg.status_list[msg.status_list.length - 1];
+    statusEl.textContent = NAV_STATUS[last.status] || '';
+    if (last.status >= 4) {
+      plan = [];
+      dirty = true;
+    }
+  }
+
+  // --- tekenen ----------------------------------------------------------------------
+
+  function fit() {
+    if (!mapInfo) return;
+    const { w, h } = size();
+    const mw = mapInfo.width * mapInfo.resolution;
+    const mh = mapInfo.height * mapInfo.resolution;
+    view.scale = Math.min(w / mw, h / mh) * 0.95;
+    view.cx = mapInfo.ox + mw / 2;
+    view.cy = mapInfo.oy + mh / 2;
+    fitted = true;
+    dirty = true;
+  }
+
+  function drawArrow(x, y, yaw, color, length) {
+    const p = worldToScreen(x, y);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(-yaw);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(length, 0);
+    ctx.lineTo(-length * 0.6, length * 0.6);
+    ctx.lineTo(-length * 0.3, 0);
+    ctx.lineTo(-length * 0.6, -length * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const { w, h } = size();
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#121821';
+    ctx.fillRect(0, 0, w, h);
+
+    if (mapImage) {
+      const topLeft = worldToScreen(mapInfo.ox, mapInfo.oy + mapInfo.height * mapInfo.resolution);
+      const span = mapInfo.resolution * view.scale;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(mapImage, topLeft.x, topLeft.y, mapInfo.width * span, mapInfo.height * span);
+    }
+
+    if (plan.length > 1) {
+      ctx.strokeStyle = '#3ccf7a';
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      plan.forEach((p, i) => {
+        const s = worldToScreen(p.x, p.y);
+        if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+      });
+      ctx.stroke();
+    }
+
+    if (robot) drawArrow(robot.x, robot.y, robot.yaw, '#409cff', 12);
+
+    if (gesture.pick) {
+      const color = mode === 'goal' ? '#f5b942' : '#c47dff';
+      drawArrow(gesture.pick.x, gesture.pick.y, gesture.pick.yaw, color, 14);
+    }
+  }
+
+  function loop() {
+    if (dirty) {
+      dirty = false;
+      draw();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // --- doel en startpositie ---------------------------------------------------------
+
+  function publishPick(pick) {
+    const pose = { position: { x: pick.x, y: pick.y, z: 0 }, orientation: quaternionFromYaw(pick.yaw) };
+    const header = { frame_id: 'map', stamp: { sec: 0, nanosec: 0 } };
+    if (mode === 'goal' && goalTopic) {
+      goalTopic.publish({ header, pose });
+      statusEl.textContent = 'doel verstuurd';
+    } else if (mode === 'initial' && initialTopic) {
+      const covariance = new Array(36).fill(0);
+      covariance[0] = 0.25;
+      covariance[7] = 0.25;
+      covariance[35] = 0.07;
+      initialTopic.publish({ header, pose: { pose, covariance } });
+      statusEl.textContent = 'startpositie gezet';
+    }
+    setMode('pan');
+  }
+
+  function setMode(newMode) {
+    mode = newMode;
+    document.querySelectorAll('.map-tools [data-mode]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+  }
+
+  document.querySelectorAll('.map-tools [data-mode]').forEach((b) => {
+    b.addEventListener('click', () => setMode(b.dataset.mode));
+  });
+
+  document.getElementById('nav-cancel').addEventListener('click', () => {
+    if (!cancelService) return;
+    // Lege goal-id en tijdstempel 0: alle doelen annuleren.
+    cancelService.callService(
+      { goal_info: { goal_id: { uuid: new Array(16).fill(0) }, stamp: { sec: 0, nanosec: 0 } } },
+      () => { statusEl.textContent = 'gestopt'; });
+  });
+
+  document.getElementById('map-fit').addEventListener('click', fit);
+
+  // --- gebaren ----------------------------------------------------------------------
+
+  const pointers = new Map();
+  const gesture = { last: null, pinch: null, pick: null };
+
+  function canvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', (event) => {
+    canvas.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, canvasPoint(event));
+    if (pointers.size === 1) {
+      const p = canvasPoint(event);
+      gesture.last = p;
+      if (mode !== 'pan') {
+        const wp = screenToWorld(p.x, p.y);
+        gesture.pick = { x: wp.x, y: wp.y, yaw: robot ? robot.yaw : 0, sx: p.x, sy: p.y };
+        dirty = true;
+      }
+    } else if (pointers.size === 2) {
+      gesture.pick = null;
+      const [a, b] = [...pointers.values()];
+      gesture.pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale };
+    }
+  });
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (!pointers.has(event.pointerId)) return;
+    const p = canvasPoint(event);
+    pointers.set(event.pointerId, p);
+
+    if (pointers.size === 2 && gesture.pinch) {
+      const [a, b] = [...pointers.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const before = screenToWorld(center.x, center.y);
+      view.scale = Math.min(400, Math.max(5, gesture.pinch.scale * dist / gesture.pinch.dist));
+      const after = screenToWorld(center.x, center.y);
+      view.cx += before.x - after.x;
+      view.cy += before.y - after.y;
+      dirty = true;
+    } else if (pointers.size === 1 && gesture.pick) {
+      const dx = p.x - gesture.pick.sx;
+      const dy = p.y - gesture.pick.sy;
+      if (Math.hypot(dx, dy) > 10) gesture.pick.yaw = Math.atan2(-dy, dx);
+      dirty = true;
+    } else if (pointers.size === 1 && gesture.last) {
+      view.cx -= (p.x - gesture.last.x) / view.scale;
+      view.cy += (p.y - gesture.last.y) / view.scale;
+      gesture.last = p;
+      dirty = true;
+    }
+  });
+
+  function endPointer(event) {
+    pointers.delete(event.pointerId);
+    if (pointers.size === 0) {
+      if (gesture.pick && event.type === 'pointerup') publishPick(gesture.pick);
+      gesture.pick = null;
+      gesture.pinch = null;
+      gesture.last = null;
+      dirty = true;
+    } else if (pointers.size === 1) {
+      gesture.pinch = null;
+      gesture.last = [...pointers.values()][0];
+    }
+  }
+
+  ['pointerup', 'pointercancel'].forEach((type) => canvas.addEventListener(type, endPointer));
+  window.addEventListener('resize', () => { dirty = true; });
+
+  // --- verbinding -------------------------------------------------------------------
+
+  function start(rosConnection) {
+    ros = rosConnection;
+    const topic = (name, messageType, options = {}) =>
+      new ROSLIB.Topic({ ros, name, messageType, ...options });
+
+    // De kaart verandert zelden: hooguit om de 5 s ophalen (alleen de laatste).
+    topic('/map', 'nav_msgs/msg/OccupancyGrid', { throttle_rate: 5000, queue_length: 1 }).subscribe(onMap);
+    topic('/robot_pose', 'geometry_msgs/msg/PoseStamped', { throttle_rate: 200 }).subscribe(onPose);
+    topic('/plan', 'nav_msgs/msg/Path', { throttle_rate: 1000, queue_length: 1 }).subscribe(onPlan);
+    topic('/navigate_to_pose/_action/status', 'action_msgs/msg/GoalStatusArray', { throttle_rate: 500 })
+      .subscribe(onNavStatus);
+
+    goalTopic = topic('/goal_pose', 'geometry_msgs/msg/PoseStamped');
+    initialTopic = topic('/initialpose_rviz', 'geometry_msgs/msg/PoseWithCovarianceStamped');
+    cancelService = new ROSLIB.Service({
+      ros, name: '/navigate_to_pose/_action/cancel_goal', serviceType: 'action_msgs/srv/CancelGoal',
+    });
+  }
+
+  requestAnimationFrame(loop);
+  return { start };
+})();

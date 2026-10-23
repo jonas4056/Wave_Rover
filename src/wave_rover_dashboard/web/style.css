@@ -249,3 +249,60 @@ button {
 .switch.on { background: var(--ok); }
 .switch.on::after { transform: translateX(20px); }
 .switch.busy { opacity: 0.5; }
+
+/* Kaart */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nav-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.map-tools {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.map-tools button {
+  padding: 9px 4px;
+  border-radius: 10px;
+  background: var(--card-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.map-tools button.active { background: var(--accent); color: #fff; }
+.map-tools button.danger { background: rgba(242, 92, 92, 0.2); color: var(--bad); }
+
+.map-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #121821;
+}
+
+#map {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  touch-action: none;
+}
+
+.map-fit {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(34, 44, 59, 0.85);
+  font-size: 1.1rem;
+}

@@ -6,6 +6,7 @@ en activeert hem automatisch.
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -20,5 +21,11 @@ def generate_launch_description():
                 'slam_params_file': config,
                 'use_sim_time': 'false',
             }.items(),
+        ),
+        # /robot_pose voor het dashboard (zonder kaartnaam: niets bewaren).
+        Node(
+            package='wave_rover_base',
+            executable='pose_saver',
+            output='screen',
         ),
     ])
