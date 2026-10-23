@@ -27,6 +27,7 @@ setup(
             'pose_saver = wave_rover_base.pose_saver:main',
             'e_stop = wave_rover_base.e_stop:main',
             'map_manager = wave_rover_base.map_manager:main',
+            'power_guard = wave_rover_base.power_guard:main',
         ],
     },
 )

@@ -188,6 +188,10 @@ krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft e
 NVIDIA-GPU.
 
 ### Systeeminstellingen op de Jetson (buiten de repo)
+- Afsluiten bij lege batterij: `power_guard` (container) maakt `~/wave_rover/run/shutdown_request`
+  aan als de UPS 30 s onder 10% zit en de aftelling van 60 s afloopt; `wave-rover-shutdown.path`
+  ziet dat en voert `systemctl poweroff` uit. Installeren: `scripts/install_power_guard.sh`.
+  Na een automatische afsluiting de UPS-schakelaar uitzetten (de UPS levert nog een kleine stroom).
 - Docker start pas na kloksynchronisatie (`docker.service.d/10-wait-time-sync.conf`, max 90 s via
   `systemd-time-wait-sync.service.d/10-timeout.conf`): zonder RTC-batterij start de klok in 1970.
 - **NVMe: nooit DISCARD sturen.** Op 23-10-2026 vastgelegd: de SPCC-SSD (MAXIO MAP1202) loopt

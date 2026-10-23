@@ -69,6 +69,8 @@ function subscribeAll() {
     .subscribe((m) => showModules(JSON.parse(m.data)));
   topic('/e_stop', 'std_msgs/msg/Bool')
     .subscribe((m) => showEstop(m.data));
+  topic('/power/shutdown_in', 'std_msgs/msg/Int32')
+    .subscribe((m) => showShutdown(m.data));
 
   cmdVel = topic('/cmd_vel_dashboard', 'geometry_msgs/msg/TwistStamped');
   estopService = new ROSLIB.Service({ ros, name: '/e_stop/set', serviceType: 'std_srvs/srv/SetBool' });
@@ -105,6 +107,14 @@ function showRc(isConnected) {
   const rc = $('rc');
   rc.textContent = isConnected ? 'aan' : 'uit';
   rc.className = `stat-value ${isConnected ? 'ok' : ''}`;
+}
+
+// --- afsluiten bij lege batterij ---------------------------------------------------
+
+function showShutdown(seconds) {
+  $('shutdown-banner').hidden = seconds < 0;
+  $('shutdown-seconds').textContent = seconds;
+  if (seconds >= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // --- noodstop -----------------------------------------------------------------------

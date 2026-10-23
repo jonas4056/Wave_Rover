@@ -352,3 +352,21 @@ button {
 }
 
 .map-save button { background: var(--accent); color: #fff; }
+
+/* Afsluiten bij lege batterij */
+.shutdown-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--bad);
+  color: #fff;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.25); }
+}

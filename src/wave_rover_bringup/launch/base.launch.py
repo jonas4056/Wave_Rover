@@ -42,6 +42,12 @@ def generate_launch_description():
             executable='battery_monitor',
             output='screen',
         ),
+        # Jetson netjes afsluiten als de UPS-batterij onder 10% zakt (aftelling 60 s).
+        Node(
+            package='wave_rover_base',
+            executable='power_guard',
+            output='screen',
+        ),
         Node(
             package='wave_rover_rc',
             executable='crsf_joy',

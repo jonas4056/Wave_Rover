@@ -12,3 +12,6 @@ __pycache__/
 
 # Kaarten van de woning: privé, niet op GitHub
 maps/
+
+# Verzoekbestanden van power_guard op de Jetson
+run/

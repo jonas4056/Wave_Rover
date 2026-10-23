@@ -20,6 +20,10 @@
   </header>
 
   <main>
+    <div id="shutdown-banner" class="shutdown-banner" role="alert" hidden>
+      <strong>Batterij Jetson bijna leeg</strong>
+      <span>Afsluiten over <b id="shutdown-seconds">60</b> s. Steek de adapter in om te annuleren.</span>
+    </div>
     <button id="estop" class="estop" type="button">NOODSTOP</button>
     <div id="estop-state" class="estop-state" hidden>
       <span>Noodstop actief</span>
