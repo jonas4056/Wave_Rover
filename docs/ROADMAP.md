@@ -176,6 +176,10 @@ NVIDIA-GPU.
   `/boot/extlinux/extlinux.conf`. De Silicon Power-SSD (MAXIO MAP1202) viel anders
   willekeurig weg. Een backup staat in `extlinux.conf.bak`.
 - Energiebesparing van de wifi uit: `/etc/NetworkManager/conf.d/99-wifi-powersave-off.conf`
+- Twee wifiprofielen: `TP-Link_9374` (prioriteit 20) en `De Clercq` (prioriteit 10, beneden).
+  Valt het ene weg, dan verbindt de Jetson met het andere. Beide via dezelfde router (192.168.1.x).
+- Hardware-watchdog (`RuntimeWatchdogSec=30s`), herstart na kernelpanic (`kernel.panic=10`,
+  `kernel.hung_task_panic=1`), NVMe Host Memory Buffer uit (`nvme.max_host_mem_size_mb=0`).
 - `jonas` zit in de groepen `docker` en `dialout`, en heeft sudo zonder wachtwoord.
 - Pakket `docker-compose-v2` is geïnstalleerd.
 
