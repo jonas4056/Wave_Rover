@@ -133,9 +133,11 @@ rijden.
 - [x] Lidarmotor altijd stoppen bij het uitzetten van de module, een crash of het herstarten
       van de container (`on_stop` in de module-manager + `lidar_stop`)
 - [x] Kaart `living_v3` (stevige lidar + gecorrigeerde odometrie); navigatie werkt erop
-- [ ] Kalibratie draaisnelheid: de robot draait maar 25-50% van wat gevraagd wordt
-      (skid-steer zonder encoders). Meten met scripts/turn_check.py en corrigeren in de
-      bridge, zodat Nav2 vloeiender bochten rijdt (daarna eventueel MPPI opnieuw proberen)
+- [x] Kalibratie draaisnelheid (23-10-2026, scripts/calibrate_motion.py): op de plaats
+      86-104%, bochten 80-90%, rechtdoor ~100% (spin_gain 1.6, curve_gain 0.9)
+- [ ] Aandachtspunt: de USB-chip (CP2102N) van de lidar liep één keer vast na snel na elkaar
+      herstarten van de container ('cp210x_open - Unable to enable UART'); alleen USB uit- en
+      insteken hielp. Komt het terug: automatische USB-reset of schakelbare USB-poort
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
