@@ -31,6 +31,12 @@ def generate_launch_description():
             executable='e_stop',
             output='screen',
         ),
+        # Kaarten opslaan/kiezen vanuit het dashboard (doet niets zonder verzoek).
+        Node(
+            package='wave_rover_base',
+            executable='map_manager',
+            output='screen',
+        ),
         Node(
             package='wave_rover_base',
             executable='battery_monitor',

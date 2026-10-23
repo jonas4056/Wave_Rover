@@ -27,8 +27,7 @@ modules:
     description: Autonoom navigeren met Nav2 op een opgeslagen kaart (lokalisatie met slam_toolbox)
     package: wave_rover_bringup
     launch: navigation.launch.py
-    args:
-      map: /home/ubuntu/wave_rover/maps/living_v3
+    # Kaart: maps/current (kiezen in het dashboard), zie navigation.launch.py.
     requires: [odometry]
     conflicts: [slam]
   voice:

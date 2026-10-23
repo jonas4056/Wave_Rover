@@ -73,6 +73,7 @@ function subscribeAll() {
   cmdVel = topic('/cmd_vel_dashboard', 'geometry_msgs/msg/TwistStamped');
   estopService = new ROSLIB.Service({ ros, name: '/e_stop/set', serviceType: 'std_srvs/srv/SetBool' });
   MapView.start(ros);
+  MapsCard.start(ros);
 }
 
 // --- status -------------------------------------------------------------------------

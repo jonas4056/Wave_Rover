@@ -13,6 +13,7 @@ anders het beginpunt van de kaart. Corrigeren kan met 2D Pose Estimate in RViz; 
 binnen via /initialpose_rviz (zie initialpose_relay).
 
 Argument `map`: pad naar de opgeslagen kaart, zonder extensie (posegraph van slam_toolbox).
+Standaard de kaart uit `maps/current` (gekozen in het dashboard via map_manager).
 """
 import json
 import os
@@ -66,13 +67,27 @@ def localization_actions(context):
     return [localization, configure, activate]
 
 
+MAPS_DIR = '/home/ubuntu/wave_rover/maps'
+FALLBACK_MAP = 'living_v3'
+
+
+def default_map():
+    """De kaart uit maps/current, anders FALLBACK_MAP."""
+    try:
+        with open(os.path.join(MAPS_DIR, 'current')) as f:
+            name = f.read().strip()
+    except OSError:
+        name = ''
+    return os.path.join(MAPS_DIR, name or FALLBACK_MAP)
+
+
 def generate_launch_description():
     share = FindPackageShare('wave_rover_bringup')
     nav2_params = PathJoinSubstitution([share, 'config', 'nav2.yaml'])
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'map', default_value='/home/ubuntu/wave_rover/maps/living_v3',
+            'map', default_value=default_map(),
             description='Opgeslagen kaart (posegraph van slam_toolbox), zonder extensie'),
         OpaqueFunction(function=localization_actions),
         IncludeLaunchDescription(

@@ -124,11 +124,12 @@ en hem door te tikken naar een plek in de living laat rijden.
 
 ## Stap D – Werkstromen
 
-- [ ] **Kaart maken:** knop start de SLAM-module → rondrijden met joystick of RC →
+- [x] **Kaart maken:** knop start de SLAM-module → rondrijden met joystick of RC →
       naam invullen → kaart opslaan
-- [ ] **Kaart kiezen** voor de navigatie (nu vast `living_v3` in `modules.yaml`): de
-      module-manager uitbreiden zodat een module met argumenten kan starten, bv. een
-      service `/modules/<naam>/start_with_args` of een parameter per module
+- [x] **Kaart kiezen** voor de navigatie: `map_manager` schrijft de keuze naar
+      `maps/current`, `navigation.launch.py` leest die bij het starten (geen uitbreiding van
+      de module-manager nodig). Bij opslaan wordt ook de huidige positie bewaard, zodat de
+      navigatie op de nieuwe kaart meteen weet waar de robot staat.
 - [ ] **Locaties met een naam** ("zetel", "tv") opslaan en er met één knop naartoe
       rijden. Samen te ontwerpen met de roadmap-taak "locaties met een naam" en later de
       spraakcommando's.

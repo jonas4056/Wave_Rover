@@ -66,6 +66,19 @@
     </section>
 
     <section class="card">
+      <h2>Kaarten</h2>
+      <ul id="maps" class="maps"></ul>
+      <form id="map-save" class="map-save">
+        <input id="map-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
+               placeholder="naam nieuwe kaart, bv. keuken" pattern="[A-Za-z0-9_-]{1,40}" required>
+        <button type="submit">Opslaan</button>
+      </form>
+      <p class="hint" id="maps-message">Nieuwe kaart: zet de module <b>slam</b> aan, rijd rustig
+        rond met de joystick (stand 1) en sla de kaart op. Kies ze daarna met "gebruik" en zet
+        de module <b>navigation</b> aan.</p>
+    </section>
+
+    <section class="card">
       <h2>Rijden</h2>
       <div class="speed" role="group" aria-label="Snelheid">
         <button type="button" data-speed="0" class="active">1</button>
@@ -87,6 +100,7 @@
 
   <script src="roslib.min.js"></script>
   <script src="map.js"></script>
+  <script src="maps.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
