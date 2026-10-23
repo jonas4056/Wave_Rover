@@ -62,6 +62,9 @@ Nog te maken:
 - [ ] Opnemen in `base.launch.py`, zodat het bij het booten mee start
 - [ ] Pagina toont een indicator "verbonden / niet verbonden" met rosbridge, en
       verbindt automatisch opnieuw
+- [ ] Rosbridge-adres **niet vastzetten** in de code: `ws://${window.location.hostname}:9090`.
+      Zo werkt de pagina via `<hostnaam>.local`, via een IP-adres en via de hotspot (stap E)
+      zonder aanpassingen.
 - [ ] Bereikbaar via `http://<jetson>:8080`; iOS-icoon en
       `apple-mobile-web-app-capable` voor "Zet op beginscherm"
 
@@ -109,12 +112,37 @@ en hem door te tikken naar een plek in de living laat rijden.
 **Klaar wanneer:** iemand die de robot niet kent, met de iPhone een nieuwe ruimte in
 kaart brengt en de robot daarna naar een opgeslagen locatie stuurt.
 
+## Stap E – Demo zonder wifi (hotspot als terugval)
+
+Bij een demo buitenshuis (bv. bij familie) is er geen bekend wifinetwerk. De Jetson maakt
+dan zelf een wifinetwerk, zodat de iPhone rechtstreeks verbindt. Dit is een
+systeeminstelling op de Jetson (buiten de container), zoals de wifi-energiebesparing.
+
+- [ ] NetworkManager-profiel `WaveRover` in hotspotmodus (WPA2, eigen wachtwoord),
+      vast adres `10.42.0.1`, standaard **niet** automatisch verbinden
+- [ ] Terugvalscript + systemd-service: vindt de Jetson na het booten binnen ~30 s geen
+      bekend wifinetwerk, dan start hij de hotspot. Thuis verandert er dus niets.
+- [ ] Installatiescript in `scripts/` (zoals `install_udev.sh`), zodat de instelling
+      reproduceerbaar is na een herinstallatie
+- [ ] Controleren dat de wifikaart van de Orin Nano hotspotmodus (AP) ondersteunt
+- [ ] ROS blijft werken op het hotspotnetwerk (`ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET`)
+- [ ] Documenteren in `ROADMAP.md` onder "Systeeminstellingen op de Jetson"
+
+Beperking: de Jetson heeft één wifikaart. Als hotspot heeft hij zelf geen internet. Voor
+een demo is dat geen probleem.
+
+Alternatief (niet gekozen): de hotspot van de iPhone. Minder betrouwbaar, want iOS zet
+de hotspot uit als er even niemand verbonden is, en het IP-adres van de Jetson is dan
+niet vast.
+
+**Klaar wanneer:** de robot zonder bekend wifinetwerk opstart, het netwerk `WaveRover`
+verschijnt, en het dashboard op `http://10.42.0.1:8080` werkt; thuis verbindt hij nog
+altijd gewoon met de wifi.
+
 ---
 
 ## Openstaande vragen
 
-- **Netwerk voor demo's buiten huis:** zonder thuiswifi is er geen verbinding. Optie:
-  de Jetson als wifi-hotspot (NetworkManager), of de hotspot van de iPhone.
 - **Beveiliging:** voorlopig alleen op het thuisnetwerk, zonder wachtwoord. Niet
   openzetten naar het internet.
 - **Camerabeeld** (fase 4): later via `web_video_server` als MJPEG-stream toevoegen.
