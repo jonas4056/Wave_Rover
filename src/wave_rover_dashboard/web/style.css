@@ -16,6 +16,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* `hidden` moet altijd winnen, ook van display: flex/grid hieronder. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
