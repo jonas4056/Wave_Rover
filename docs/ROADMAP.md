@@ -172,6 +172,8 @@ krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft e
 NVIDIA-GPU.
 
 ### Systeeminstellingen op de Jetson (buiten de repo)
+- Docker start pas na kloksynchronisatie (`docker.service.d/10-wait-time-sync.conf`, max 90 s via
+  `systemd-time-wait-sync.service.d/10-timeout.conf`): zonder RTC-batterij start de klok in 1970.
 - **NVMe: nooit DISCARD sturen.** Op 23-10-2026 vastgelegd: de SPCC-SSD (MAXIO MAP1202) loopt
   vast op een DISCARD-opdracht (`req_op:DISCARD ... timeout, reset controller`), waarna alle
   schrijfopdrachten blokkeren. Oplossing: udev-regel `/etc/udev/rules.d/60-nvme-no-discard.rules`
