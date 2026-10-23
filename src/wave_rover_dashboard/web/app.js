@@ -118,7 +118,11 @@ function setEstop(active) {
   estopService.callService({ data: active }, () => {}, (err) => alertError(err));
 }
 
-$('estop').addEventListener('click', () => setEstop(true));
+// pointerdown i.p.v. click: iOS stuurt geen click als er al een vinger op de joystick ligt.
+$('estop').addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  setEstop(true);
+});
 $('estop-release').addEventListener('click', () => setEstop(false));
 
 // --- modules ------------------------------------------------------------------------

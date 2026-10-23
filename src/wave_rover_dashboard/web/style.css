@@ -91,6 +91,7 @@ button {
 }
 
 .estop:active { filter: brightness(0.85); }
+.estop { touch-action: none; }
 
 .estop-state {
   display: flex;
