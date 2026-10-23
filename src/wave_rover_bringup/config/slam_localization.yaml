@@ -3,9 +3,8 @@ slam_toolbox:
     # Lokaliseren op een opgeslagen posegraph (de kaart zelf wordt niet meer aangepast).
     # map_file_name wordt door navigation.launch.py ingevuld.
     mode: localization
-    # Start op het eerste punt van de kaart (waar het mappen begon); corrigeren kan
-    # met 2D Pose Estimate in RViz (/initialpose).
-    map_start_at_dock: true
+    # Startpositie (map_start_at_dock / map_start_pose) zet navigation.launch.py: de laatst
+    # bekende positie, anders het eerste punt van de kaart.
     scan_topic: /scan
     base_frame: base_footprint
     odom_frame: odom

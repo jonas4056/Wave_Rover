@@ -139,6 +139,9 @@ rijden.
       herstarten van de container ('cp210x_open - Unable to enable UART'); alleen USB uit- en
       insteken hielp. Komt het terug: automatische USB-reset of schakelbare USB-poort
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
+- [x] Laatst bekende positie onthouden (`pose_saver` -> `<kaart>.lastpose`); de navigatie start daar
+- [ ] Globaal lokaliseren ("zoek jezelf") als de robot verplaatst werd: knop in het dashboard
+      (bv. tijdelijk AMCL met global localization + rondje draaien)
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"

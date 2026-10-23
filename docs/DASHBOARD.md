@@ -116,6 +116,8 @@ vrijgegeven worden vanaf de iPhone én vanaf de RC-zender.
 - [ ] Navigatiestatus tonen: onderweg / aangekomen / opgegeven
 - [ ] Knop "navigatie annuleren"
 - [ ] Startpositie zetten (zoals "2D Pose Estimate" in RViz) via `/initialpose_rviz`
+- [ ] Knop "zoek jezelf" (globaal lokaliseren) voor als de robot verplaatst werd terwijl hij
+      uit stond; normaal start de navigatie op de laatst bekende positie
 
 **Klaar wanneer:** je zonder RViz de navigatiemodule start, de robot op de kaart ziet,
 en hem door te tikken naar een plek in de living laat rijden.
