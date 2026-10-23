@@ -53,6 +53,9 @@ from std_srvs.srv import SetBool
 STOP_TIMEOUT = 10.0
 # Zo lang moet een module draaien voor ze als "aan" geldt.
 STARTUP_GRACE = 2.0
+# Na een (her)start zo lang wachten voor de gezondheidscontrole meetelt (driver moet
+# verbinden, lidarmotor op toeren komen).
+HEALTH_GRACE = 10.0
 
 
 class Module:
@@ -217,6 +220,7 @@ class ModuleManager(Node):
         now = time.monotonic()
         for module in self.modules.values():
             if (module.health and module.state == 'aan' and not module.restarting
+                    and now - module.started_at > HEALTH_GRACE
                     and now - module.last_health > module.health['timeout']):
                 module.restarting = True
                 module.state = 'start'
