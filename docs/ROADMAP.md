@@ -178,6 +178,9 @@ NVIDIA-GPU.
 - Energiebesparing van de wifi uit: `/etc/NetworkManager/conf.d/99-wifi-powersave-off.conf`
 - Twee wifiprofielen: `TP-Link_9374` (prioriteit 20) en `De Clercq` (prioriteit 10, beneden).
   Valt het ene weg, dan verbindt de Jetson met het andere. Beide via dezelfde router (192.168.1.x).
+  Getest op 23-10-2026: zelfde IP (192.168.1.28) op beide netwerken.
+- Wifi-regiocode België: `/etc/modprobe.d/cfg80211-regdom.conf` (`ieee80211_regdom=BE`).
+- Het ESP32-bord van de Wave Rover maakt zelf een wifi-hotspot `UGV`.
 - Hardware-watchdog (`RuntimeWatchdogSec=30s`), herstart na kernelpanic (`kernel.panic=10`,
   `kernel.hung_task_panic=1`), NVMe Host Memory Buffer uit (`nvme.max_host_mem_size_mb=0`).
 - `jonas` zit in de groepen `docker` en `dialout`, en heeft sudo zonder wachtwoord.
