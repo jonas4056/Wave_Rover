@@ -32,7 +32,7 @@ Visualization Manager:
       Topic:
         Value: /plan
       Color: 0; 200; 0
-      Line Width: 0.03
+      Line Width: 0.04
       Line Style: Billboards
     - Class: rviz_default_plugins/Polygon
       Name: Footprint
@@ -40,16 +40,6 @@ Visualization Manager:
       Topic:
         Value: /local_costmap/published_footprint
       Color: 255; 200; 0
-    - Class: rviz_default_plugins/Odometry
-      Name: Odometrie
-      Enabled: true
-      Topic:
-        Value: /odometry/filtered
-      Keep: 20
-      Shape:
-        Value: Arrow
-      Covariance:
-        Value: false
     - Class: rviz_default_plugins/Grid
       Name: Grid
       Enabled: true

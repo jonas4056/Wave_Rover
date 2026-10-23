@@ -8,7 +8,8 @@
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
-# Bochten rijden kan sinds de bridge de verhouding links/rechts behoudt; pas vanaf ~60 graden
+# Korte lookahead (0,45 m) om de route strak te volgen; bochten rijden kan sinds de bridge de
+# verhouding links/rechts behoudt en de draaisnelheid gekalibreerd is; pas vanaf ~60 graden
 # afwijking eerst op de plaats draaien (rotate_to_heading_min_angle).
 # Draaien wordt meteen afgeremd (max_decel -30): anders schiet de robot voorbij de doelrichting
 # en pendelt hij heen en weer.
@@ -105,9 +106,9 @@ controller_server:
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
       desired_linear_vel: 0.28
-      lookahead_dist: 0.7
-      min_lookahead_dist: 0.5
-      max_lookahead_dist: 1.0
+      lookahead_dist: 0.45
+      min_lookahead_dist: 0.35
+      max_lookahead_dist: 0.7
       lookahead_time: 1.5
       use_velocity_scaled_lookahead_dist: false
       min_approach_linear_velocity: 0.05
