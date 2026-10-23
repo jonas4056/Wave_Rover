@@ -9,7 +9,7 @@ De module kent alleen vaste zinnen uit de firmware; vrije tekst kan niet.
 Topics:
 - /voice/command (String): naam van elk herkend commando, bv. "GO-AHEAD"
 - /voice/say (String): naam uit PHRASES om af te spelen, bv. "I-AM-READY"
-- /e_stop (Bool): "robot stop"/"stop" -> true (noodstop via twist_mux), "go ahead" -> false
+- noodstop via de service /e_stop/set (node e_stop): "robot stop"/"stop" -> aan, "go ahead" -> vrij
 
 Batterijstatus als kleur ("this" = chassis, "there" = Jetson):
 groen >= 50%, geel 20-50%, rood < 20%. Wordt uitgesproken na "display power" en
@@ -22,9 +22,9 @@ import rclpy
 import serial
 from action_msgs.srv import CancelGoal
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import Bool, String
+from std_msgs.msg import String
+from std_srvs.srv import SetBool
 
 # (type, id) zoals de module ze stuurt -> naam uit de protocollijst van Yahboom.
 COMMANDS = {
@@ -73,9 +73,8 @@ class YahboomVoice(Node):
         self.ser = serial.Serial(self.get_parameter('port').value, 115200, timeout=0.1)
         self.write_lock = threading.Lock()
 
-        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.command_pub = self.create_publisher(String, 'voice/command', 10)
-        self.estop_pub = self.create_publisher(Bool, 'e_stop', latched)
+        self.estop_client = self.create_client(SetBool, 'e_stop/set')
         self.create_subscription(String, 'voice/say', lambda m: self.say(m.data), 10)
 
         self.battery_pct = {}
@@ -88,10 +87,15 @@ class YahboomVoice(Node):
 
         self.cancel_nav = self.create_client(CancelGoal, 'navigate_to_pose/_action/cancel_goal')
 
-        self.estop_pub.publish(Bool(data=False))
         threading.Thread(target=self.read_loop, daemon=True).start()
         self.say('I-AM-READY')
         self.get_logger().info('Yahboom-spraakmodule klaar')
+
+    def set_e_stop(self, active):
+        if not self.estop_client.service_is_ready():
+            self.get_logger().error('Service /e_stop/set niet beschikbaar')
+            return
+        self.estop_client.call_async(SetBool.Request(data=active))
 
     # --- uitspreken -----------------------------------------------------------------
 
@@ -163,11 +167,11 @@ class YahboomVoice(Node):
         self.command_pub.publish(String(data=name))
 
         if name in ('ROBOT-STOP', 'STOP'):
-            self.estop_pub.publish(Bool(data=True))
+            self.set_e_stop(True)
             if self.cancel_nav.service_is_ready():
                 self.cancel_nav.call_async(CancelGoal.Request())  # lege id = alle doelen
         elif name == 'GO-AHEAD':
-            self.estop_pub.publish(Bool(data=False))
+            self.set_e_stop(False)
         elif name == 'DISPLAY-POWER':
             # De module zegt eerst zelf "ok the battery level is displayed".
             self.say(*self.battery_phrases(), delay=PHRASE_GAP + 1.0)

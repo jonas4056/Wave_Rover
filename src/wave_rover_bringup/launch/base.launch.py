@@ -25,6 +25,12 @@ def generate_launch_description():
             remappings=[('cmd_vel', 'cmd_vel_safe')],
             output='screen',
         ),
+        # Enige eigenaar van /e_stop (lock in twist_mux); service /e_stop/set, vrijgeven met RC kanaal 8.
+        Node(
+            package='wave_rover_base',
+            executable='e_stop',
+            output='screen',
+        ),
         Node(
             package='wave_rover_base',
             executable='battery_monitor',

@@ -1,16 +1,19 @@
 :root {
   --bg: #18202c;
   --card: #222c3b;
+  --card-2: #2b3749;
   --text: #e8edf4;
   --muted: #8a97a8;
   --ok: #3ccf7a;
   --warn: #f5b942;
   --bad: #f25c5c;
+  --accent: #409cff;
   --radius: 14px;
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -23,7 +26,9 @@ body {
 }
 
 body {
-  padding: env(safe-area-inset-top, 0px) 16px env(safe-area-inset-bottom, 0px);
+  padding: env(safe-area-inset-top, 0px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  max-width: 640px;
+  margin-inline: auto;
 }
 
 header {
@@ -40,10 +45,17 @@ h1 {
 }
 
 h2 {
-  margin: 0 0 8px;
-  font-size: 1rem;
+  margin: 0 0 12px;
+  font-size: 0.95rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
 }
 
 .card {
@@ -61,17 +73,173 @@ h2 {
   white-space: nowrap;
 }
 
-.badge.online {
-  background: rgba(60, 207, 122, 0.18);
-  color: var(--ok);
+.badge.online { background: rgba(60, 207, 122, 0.18); color: var(--ok); }
+.badge.offline { background: rgba(242, 92, 92, 0.18); color: var(--bad); }
+.badge.connecting { background: rgba(245, 185, 66, 0.18); color: var(--warn); }
+
+/* Noodstop */
+.estop {
+  width: 100%;
+  padding: 18px;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  background: var(--bad);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 
-.badge.offline {
+.estop:active { filter: brightness(0.85); }
+
+.estop-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
   background: rgba(242, 92, 92, 0.18);
   color: var(--bad);
+  font-weight: 700;
 }
 
-.badge.connecting {
-  background: rgba(245, 185, 66, 0.18);
-  color: var(--warn);
+.estop-state button {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--card-2);
+  color: var(--text);
+  font-weight: 600;
 }
+
+/* Status */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  background: var(--card-2);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+
+.stat-label { font-size: 0.8rem; color: var(--muted); }
+.stat-value { font-size: 1.25rem; font-weight: 700; }
+.stat-sub { font-size: 0.75rem; color: var(--muted); }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.bad { color: var(--bad); }
+
+/* Rijden */
+.speed {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.speed button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--card-2);
+  font-weight: 700;
+}
+
+.speed button.active { background: var(--accent); color: #fff; }
+
+.joystick {
+  position: relative;
+  width: min(260px, 70vw);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--card-2) 0 60%, #1d2633 61%);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34%;
+  aspect-ratio: 1;
+  margin: -17% 0 0 -17%;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.joystick.disabled { opacity: 0.4; }
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Modules */
+.modules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.modules li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--card-2);
+}
+
+.modules li:first-child { border-top: 0; }
+
+.module-info { flex: 1; min-width: 0; }
+.module-name { font-weight: 600; }
+.module-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-state {
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 3.5em;
+  text-align: right;
+}
+
+.switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--card-2);
+  transition: background 0.2s;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.switch.on { background: var(--ok); }
+.switch.on::after { transform: translateX(20px); }
+.switch.busy { opacity: 0.5; }

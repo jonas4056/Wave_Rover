@@ -85,22 +85,22 @@ van de container vanzelf opnieuw verbindt.
 
 ## Stap B – Status en bediening (eerste demoversie)
 
-- [ ] Batterij UPS en chassis (percentage en spanning, kleur bij laag). Tijdens het laden
+- [x] Batterij UPS en chassis (percentage en spanning, kleur bij laag). Tijdens het laden
       leest het percentage te hoog: dan "laadt" tonen in plaats van het percentage
       (`power_supply_status` van `/ups/battery`)
-- [ ] RC-zender verbonden ja/nee
-- [ ] Lijst van modules met status (uit, start, aan, stopt, fout) en een schakelaar per
+- [x] RC-zender verbonden ja/nee
+- [x] Lijst van modules met status (uit, start, aan, stopt, fout) en een schakelaar per
       module. De manager regelt `requires` en `conflicts` al zelf.
-- [ ] Grote **noodstop**-knop via `/e_stop/set` (true); aparte knop "vrijgeven" (false).
+- [x] Grote **noodstop**-knop via `/e_stop/set` (true); aparte knop "vrijgeven" (false).
       Toont ook of de noodstop actief is
-- [ ] Virtuele joystick → `cmd_vel_dashboard` op ~10 Hz
+- [x] Virtuele joystick → `cmd_vel_dashboard` op ~10 Hz
   - alleen publiceren zolang de vinger op de joystick ligt (dodemansknop)
   - stoppen bij loslaten, bij `visibilitychange` (app naar achtergrond) en bij
     verlies van verbinding
   - snelheidskeuze in drie standen, zoals op de RC-zender (`max_linear`, `max_angular`)
 
-- [ ] Node `e_stop` met service `/e_stop/set`; spraakmodule omzetten naar die service
-- [ ] Noodstop vrijgeven met kanaal 8 van de RC-zender
+- [x] Node `e_stop` met service `/e_stop/set`; spraakmodule omzetten naar die service
+- [x] Noodstop vrijgeven met kanaal 8 van de RC-zender
 
 **Klaar wanneer:** je met enkel de iPhone de robot kunt laten rijden, een module kunt
 starten en stoppen, en de noodstop de robot stilzet, ook als Nav2 rijdt. De noodstop kan

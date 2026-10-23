@@ -25,6 +25,7 @@ setup(
             'yahboom_voice = wave_rover_base.yahboom_voice:main',
             'lidar_stop = wave_rover_base.lidar_stop:main',
             'pose_saver = wave_rover_base.pose_saver:main',
+            'e_stop = wave_rover_base.e_stop:main',
         ],
     },
 )
