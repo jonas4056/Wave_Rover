@@ -9,6 +9,9 @@ modules:
     launch: lidar.launch.py
     # De C1 blijft draaien als de driver abrupt stopt: motor altijd expliciet stilzetten.
     on_stop: [ros2, run, wave_rover_base, lidar_stop]
+    # Valt de USB even weg, dan blijft de driver hangen zonder te stoppen: herstarten
+    # als er 3 s geen scans komen.
+    health: {topic: /scan, type: sensor_msgs/msg/LaserScan, timeout: 3.0}
   odometry:
     description: Lidar-odometrie + IMU (EKF) -> TF odom -> base_footprint
     package: wave_rover_bringup

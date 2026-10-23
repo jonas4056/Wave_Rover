@@ -135,6 +135,10 @@ rijden.
 - [x] Kaart `living_v3` (stevige lidar + gecorrigeerde odometrie); navigatie werkt erop
 - [x] Kalibratie draaisnelheid (23-10-2026, scripts/calibrate_motion.py): op de plaats
       86-104%, bochten 80-90%, rechtdoor ~100% (spin_gain 1.6, curve_gain 0.9)
+- [x] Gezondheidscontrole in de module-manager: geen /scan gedurende 3 s -> lidar herstarten
+      (zonder odometrie/navigatie te stoppen). Aanleiding: bij het uittrekken van de adapter
+      schakelt de UPS over naar batterij en valt de lidar-USB ~1 s weg (gezien 23-10-2026);
+      de driver bleef dan hangen zonder te stoppen.
 - [ ] Aandachtspunt: de USB-chip (CP2102N) van de lidar liep één keer vast na snel na elkaar
       herstarten van de container ('cp210x_open - Unable to enable UART'); alleen USB uit- en
       insteken hielp. Komt het terug: automatische USB-reset of schakelbare USB-poort

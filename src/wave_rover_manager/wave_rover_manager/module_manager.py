@@ -14,6 +14,12 @@ Een module is een launchbestand, beschreven in een YAML-bestand (parameter
         requires: [lidar]
         conflicts: [navigation]
         on_stop: [ros2, run, wave_rover_base, lidar_stop]
+        health: {topic: /scan, type: sensor_msgs/msg/LaserScan, timeout: 3.0}
+
+`health`: komt er bij een draaiende module langer dan `timeout` seconden niets binnen op
+`topic`, dan wordt de module herstart (zonder de modules die ervan afhangen te stoppen).
+Nodig voor drivers die vastlopen in plaats van te stoppen, bv. als een USB-apparaat even
+wegvalt.
 
 `on_stop` is een commando dat na het stoppen van de module wordt uitgevoerd, ook na
 een crash, en eenmaal bij het opstarten van de manager (opruimen na een herstart).
@@ -39,7 +45,8 @@ import time
 import rclpy
 import yaml
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
+from rosidl_runtime_py.utilities import get_message
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
@@ -59,6 +66,9 @@ class Module:
         self.requires = list(spec.get('requires', []))
         self.conflicts = list(spec.get('conflicts', []))
         self.on_stop = list(spec.get('on_stop', []))
+        self.health = spec.get('health')
+        self.last_health = 0.0
+        self.restarting = False
         self.process = None
         self.started_at = 0.0
         self.state = 'uit'
@@ -86,6 +96,11 @@ class ModuleManager(Node):
 
         for module in self.modules.values():
             self.run_on_stop(module)
+            if module.health:
+                self.create_subscription(
+                    get_message(module.health['type']), module.health['topic'],
+                    lambda _msg, m=module: setattr(m, 'last_health', time.monotonic()),
+                    qos_profile_sensor_data)
         self.create_timer(1.0, self.update_states)
         self.get_logger().info(f'Modules: {", ".join(self.modules)}')
         self.publish_status()
@@ -125,11 +140,17 @@ class ModuleManager(Node):
         with self.lock:
             if module.process and module.process.poll() is None:
                 return
-            log = open(os.path.join(self.log_dir, f'{name}.log'), 'w')
+            self.launch(module)
+
+    def launch(self, module, log_mode='w'):
+        with self.lock:
+            name = module.name
+            log = open(os.path.join(self.log_dir, f'{name}.log'), log_mode)
             cmd = ['ros2', 'launch', module.package, module.launch, *module.args]
             module.process = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT,
                                               start_new_session=True)
             module.started_at = time.monotonic()
+            module.last_health = module.started_at
             module.state = 'start'
             self.get_logger().info(f'Start {name}: {" ".join(cmd)}')
 
@@ -147,20 +168,34 @@ class ModuleManager(Node):
             module.state = 'stopt'
         self.get_logger().info(f'Stop {name}')
         self.publish_status()
+        self.kill(module, process)
+        self.run_on_stop(module)
+        with self.lock:
+            module.state = 'uit'
 
+    def kill(self, module, process):
         # ros2 launch sluit netjes af op SIGINT; daarna desnoods harder.
         pgid = os.getpgid(process.pid)
         os.killpg(pgid, signal.SIGINT)
         try:
             process.wait(STOP_TIMEOUT)
         except subprocess.TimeoutExpired:
-            self.get_logger().warn(f'{name} reageert niet, wordt geforceerd gestopt')
+            self.get_logger().warn(f'{module.name} reageert niet, wordt geforceerd gestopt')
             os.killpg(pgid, signal.SIGKILL)
             process.wait()
 
-        self.run_on_stop(module)
-        with self.lock:
-            module.state = 'uit'
+    def restart_unhealthy(self, module):
+        """Herstart alleen deze module; modules die ervan afhangen blijven draaien."""
+        self.get_logger().error(
+            f'{module.name}: niets ontvangen op {module.health["topic"]} sinds '
+            f'{module.health["timeout"]} s, module wordt herstart')
+        try:
+            self.kill(module, module.process)
+            self.run_on_stop(module)
+            self.launch(module, log_mode='a')
+        finally:
+            module.restarting = False
+        self.publish_status()
 
     def run_on_stop(self, module):
         if not module.on_stop:
@@ -179,9 +214,18 @@ class ModuleManager(Node):
     # --- status -------------------------------------------------------------------
 
     def update_states(self):
+        now = time.monotonic()
+        for module in self.modules.values():
+            if (module.health and module.state == 'aan' and not module.restarting
+                    and now - module.last_health > module.health['timeout']):
+                module.restarting = True
+                module.state = 'start'
+                threading.Thread(target=self.restart_unhealthy, args=(module,), daemon=True).start()
         changed = False
         with self.lock:
             for module in self.modules.values():
+                if module.restarting:
+                    continue
                 process = module.process
                 if module.state == 'start' and process.poll() is None \
                         and time.monotonic() - module.started_at > STARTUP_GRACE:
