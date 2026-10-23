@@ -36,7 +36,7 @@ onder **"Klaar wanneer"** werken.
 | Batterij UPS (Jetson) | `/ups/battery` | `sensor_msgs/BatteryState` |
 | Batterij chassis | `/chassis/battery` | `sensor_msgs/BatteryState` |
 | RC-zender verbonden | `/rc/connected` | `std_msgs/Bool` |
-| Noodstop | `/e_stop` | `std_msgs/Bool` (lock in `twist_mux`, prioriteit 255) |
+| Noodstop | `/e_stop/set` | service `std_srvs/SetBool` (nieuw, zie hieronder); `/e_stop` blijft het topic voor `twist_mux` |
 | Rijden vanaf het dashboard | `/cmd_vel_dashboard` | `geometry_msgs/TwistStamped`, timeout 0,5 s |
 | Kaart | `/map` | `nav_msgs/OccupancyGrid` |
 | Naar een punt rijden | `/goal_pose` | `geometry_msgs/PoseStamped` (bt_navigator luistert hierop) |
@@ -44,6 +44,18 @@ onder **"Klaar wanneer"** werken.
 | Startpositie zetten | `/initialpose_rviz` | `PoseWithCovarianceStamped` (via `initialpose_relay`) |
 
 Nog te maken:
+- **Noodstop met één eigenaar:** een kleine node `e_stop` die als enige `/e_stop` publiceert
+  (latched) en een service `/e_stop/set` aanbiedt. Dashboard en spraakmodule roepen die
+  service aan in plaats van zelf op `/e_stop` te publiceren. Zo kan na een herverbinding
+  geen oude waarde van de ene bron die van de andere overschrijven, en logt de node wie
+  de noodstop zette of vrijgaf.
+- **Noodstop vrijgeven vanaf de RC-zender:** de noodstop (prioriteit 255) blokkeert ook de
+  zender. Een schakelaar op kanaal 8 (nu vrij) geeft hem vrij, zodat je niet vastzit als de
+  iPhone leeg of buiten bereik is.
+- **Navigatiestatus:** onderweg / aangekomen / opgegeven, uit
+  `/navigate_to_pose/_action/status`, en de geplande route `/plan` (`nav_msgs/Path`).
+- **Module starten met argumenten** (bv. een kaartnaam): uitbreiding van de module-manager,
+  nodig voor stap D.
 - **`/robot_pose`** (`geometry_msgs/PoseStamped`, 5 Hz): positie van `base_footprint`
   in `map`. Een kleine node in `wave_rover_base`, zodat de browser geen TF hoeft te
   verwerken.
@@ -73,19 +85,26 @@ van de container vanzelf opnieuw verbindt.
 
 ## Stap B – Status en bediening (eerste demoversie)
 
-- [ ] Batterij UPS en chassis (percentage en spanning, kleur bij laag)
+- [ ] Batterij UPS en chassis (percentage en spanning, kleur bij laag). Tijdens het laden
+      leest het percentage te hoog: dan "laadt" tonen in plaats van het percentage
+      (`power_supply_status` van `/ups/battery`)
 - [ ] RC-zender verbonden ja/nee
 - [ ] Lijst van modules met status (uit, start, aan, stopt, fout) en een schakelaar per
       module. De manager regelt `requires` en `conflicts` al zelf.
-- [ ] Grote **noodstop**-knop: `e_stop = true` (latched); aparte knop "vrijgeven"
+- [ ] Grote **noodstop**-knop via `/e_stop/set` (true); aparte knop "vrijgeven" (false).
+      Toont ook of de noodstop actief is
 - [ ] Virtuele joystick → `cmd_vel_dashboard` op ~10 Hz
   - alleen publiceren zolang de vinger op de joystick ligt (dodemansknop)
   - stoppen bij loslaten, bij `visibilitychange` (app naar achtergrond) en bij
     verlies van verbinding
   - snelheidskeuze in drie standen, zoals op de RC-zender (`max_linear`, `max_angular`)
 
+- [ ] Node `e_stop` met service `/e_stop/set`; spraakmodule omzetten naar die service
+- [ ] Noodstop vrijgeven met kanaal 8 van de RC-zender
+
 **Klaar wanneer:** je met enkel de iPhone de robot kunt laten rijden, een module kunt
-starten en stoppen, en de noodstop de robot stilzet, ook als Nav2 rijdt.
+starten en stoppen, en de noodstop de robot stilzet, ook als Nav2 rijdt. De noodstop kan
+vrijgegeven worden vanaf de iPhone én vanaf de RC-zender.
 
 ## Stap C – Kaart en navigatie
 
@@ -93,6 +112,8 @@ starten en stoppen, en de noodstop de robot stilzet, ook als Nav2 rijdt.
 - [ ] `/map` tekenen op een canvas, met de robot als pijltje erop
 - [ ] Zoomen en verschuiven met twee vingers
 - [ ] Tik op de kaart → richting kiezen door te slepen → `/goal_pose`
+- [ ] Geplande route `/plan` op de kaart tekenen
+- [ ] Navigatiestatus tonen: onderweg / aangekomen / opgegeven
 - [ ] Knop "navigatie annuleren"
 - [ ] Startpositie zetten (zoals "2D Pose Estimate" in RViz) via `/initialpose_rviz`
 
@@ -103,8 +124,9 @@ en hem door te tikken naar een plek in de living laat rijden.
 
 - [ ] **Kaart maken:** knop start de SLAM-module → rondrijden met joystick of RC →
       naam invullen → kaart opslaan
-- [ ] **Kaart kiezen** voor de navigatie (nu vast `living_v3` in `modules.yaml`):
-      de navigatiemodule moet een kaartnaam als argument kunnen krijgen
+- [ ] **Kaart kiezen** voor de navigatie (nu vast `living_v3` in `modules.yaml`): de
+      module-manager uitbreiden zodat een module met argumenten kan starten, bv. een
+      service `/modules/<naam>/start_with_args` of een parameter per module
 - [ ] **Locaties met een naam** ("zetel", "tv") opslaan en er met één knop naartoe
       rijden. Samen te ontwerpen met de roadmap-taak "locaties met een naam" en later de
       spraakcommando's.
