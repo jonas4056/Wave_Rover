@@ -160,6 +160,9 @@ rijden.
 ### Fase 4 – Camera en beeldherkenning op de GPU
 - [ ] CSI-camera in de container (Argus op JetPack 7 testen)
 - [ ] Objectdetectie met TensorRT (bv. YOLO) → objecten worden op de kaart aangeduid
+- [ ] **Lage obstakels** (speelgoed, kabels): de lidar scant op 20 cm hoogte en ziet die niet.
+      Opties: dieptebeeld uit de camera (bv. Depth Anything op de GPU) als extra laag in de
+      costmap, en/of goedkope ToF-/ultrasone sensoren laag vooraan als vangnet
 - [ ] Isaac ROS 4.6 op de Orin Nano testen (cuVSLAM en eventueel nvblox voor 3D-obstakels)
 
 **Klaar wanneer:** de robot detecties zoals "tv" en "zetel" in realtime op de kaart
