@@ -1,4 +1,4 @@
-"""Basis van de Wave Rover: ESP32-bridge, RC-zender, twist_mux, robotmodel, batterijbewaking en module-manager."""
+"""Basis van de Wave Rover: ESP32-bridge, RC-zender, twist_mux, robotmodel, batterijbewaking, module-manager en dashboard."""
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.substitutions import PathJoinSubstitution
@@ -47,6 +47,10 @@ def generate_launch_description():
             executable='twist_mux',
             parameters=[config],
             remappings=[('cmd_vel_out', 'cmd_vel_safe')],
+        ),
+        IncludeLaunchDescription(
+            PathJoinSubstitution(
+                [FindPackageShare('wave_rover_dashboard'), 'launch', 'dashboard.launch.py'])
         ),
         Node(
             package='wave_rover_manager',

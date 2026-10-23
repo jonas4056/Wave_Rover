@@ -66,12 +66,12 @@ Nog te maken:
 
 ## Stap A – Infrastructuur
 
-- [ ] `ros-jazzy-rosbridge-server` toevoegen aan de Dockerfile
-- [ ] Nieuw package `wave_rover_dashboard` met de map `web/` (index.html, app.js,
+- [x] `ros-jazzy-rosbridge-server` toevoegen aan de Dockerfile
+- [x] Nieuw package `wave_rover_dashboard` met de map `web/` (index.html, app.js,
       style.css, `roslib.min.js`)
-- [ ] `dashboard.launch.py`: `rosbridge_websocket` (9090) + statische webserver (8080)
+- [x] `dashboard.launch.py`: `rosbridge_websocket` (9090) + statische webserver (8080)
       op de map `web/`
-- [ ] Opnemen in `base.launch.py`, zodat het bij het booten mee start
+- [x] Opnemen in `base.launch.py`, zodat het bij het booten mee start
 - [ ] Pagina toont een indicator "verbonden / niet verbonden" met rosbridge, en
       verbindt automatisch opnieuw
 - [ ] Rosbridge-adres **niet vastzetten** in de code: `ws://${window.location.hostname}:9090`.

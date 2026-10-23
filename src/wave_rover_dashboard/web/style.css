@@ -1,0 +1,77 @@
+:root {
+  --bg: #18202c;
+  --card: #222c3b;
+  --text: #e8edf4;
+  --muted: #8a97a8;
+  --ok: #3ccf7a;
+  --warn: #f5b942;
+  --bad: #f25c5c;
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  padding: env(safe-area-inset-top, 0px) 16px env(safe-area-inset-bottom, 0px);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.online {
+  background: rgba(60, 207, 122, 0.18);
+  color: var(--ok);
+}
+
+.badge.offline {
+  background: rgba(242, 92, 92, 0.18);
+  color: var(--bad);
+}
+
+.badge.connecting {
+  background: rgba(245, 185, 66, 0.18);
+  color: var(--warn);
+}

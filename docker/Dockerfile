@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-navigation2 \
         libeigen3-dev \
         ros-jazzy-robot-state-publisher \
+        ros-jazzy-rosbridge-server \
         ros-jazzy-robot-localization \
         ros-jazzy-slam-toolbox \
         ros-jazzy-tf2-geometry-msgs \
