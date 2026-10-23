@@ -75,17 +75,17 @@ def main():
                   f'({actual / (sign * wz) * 100:.0f}%)', flush=True)
 
     print('Bocht (vooruit + draaien)', flush=True)
-    for vx, wz in ((0.2, 0.8), (0.2, -0.8)):
-        avx, awz = cal.drive(vx, wz, 3.0)
-        cal.drive(-vx, -wz, 3.0)  # terug naar ongeveer het startpunt
+    for vx, wz in ((0.15, 0.8), (0.15, -0.8)):
+        avx, awz = cal.drive(vx, wz, 2.0)
+        cal.drive(-vx, -wz, 2.0)  # terug naar ongeveer het startpunt
         rows.append(('bocht', vx, wz, avx, awz))
         print(f'  gevraagd {vx:.2f} m/s, {wz:+.1f} rad/s -> echt {avx:.2f} m/s, {awz:+.2f} rad/s '
               f'({awz / wz * 100:.0f}% draaien)', flush=True)
 
     print('Rechtdoor', flush=True)
-    for vx in (0.15, 0.3):
-        avx, _ = cal.drive(vx, 0.0, 2.0)
-        bvx, _ = cal.drive(-vx, 0.0, 2.0)
+    for vx in (0.15, 0.25):
+        avx, _ = cal.drive(vx, 0.0, 1.5)
+        bvx, _ = cal.drive(-vx, 0.0, 1.5)
         rows.append(('rechtdoor', vx, 0.0, avx, 0.0))
         print(f'  gevraagd {vx:.2f} m/s -> vooruit {avx:.2f}, achteruit {-bvx:.2f} m/s '
               f'({(avx - bvx) / 2 / vx * 100:.0f}%)', flush=True)

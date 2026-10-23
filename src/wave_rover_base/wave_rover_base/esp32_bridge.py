@@ -54,6 +54,10 @@ class Esp32Bridge(Node):
         self.declare_parameter('min_turn_wheel_cmd', 0.25)
         # Minimum bij draaien op de plaats: lager, anders draait de robot te snel voor lidar/IMU.
         self.declare_parameter('min_spin_wheel_cmd', 0.17)
+        # Correctie van de draaisnelheid, gemeten met scripts/calibrate_motion.py: de robot
+        # draait zonder correctie ~60% van wat gevraagd wordt op de plaats en ~86% in een bocht.
+        self.declare_parameter('spin_gain', 1.6)
+        self.declare_parameter('curve_gain', 1.15)
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
@@ -64,6 +68,8 @@ class Esp32Bridge(Node):
         self.min_wheel_cmd = self.get_parameter('min_wheel_cmd').value
         self.min_turn_wheel_cmd = self.get_parameter('min_turn_wheel_cmd').value
         self.min_spin_wheel_cmd = self.get_parameter('min_spin_wheel_cmd').value
+        self.spin_gain = self.get_parameter('spin_gain').value
+        self.curve_gain = self.get_parameter('curve_gain').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
         self.imu_frame = self.get_parameter('imu_frame').value
 
@@ -101,12 +107,21 @@ class Esp32Bridge(Node):
     def on_cmd_vel(self, stamped):
         msg = stamped.twist
         half = self.track_width / 2.0
-        left = msg.linear.x - msg.angular.z * half
-        right = msg.linear.x + msg.angular.z * half
+        wz = msg.angular.z * self.angular_gain(msg.linear.x, msg.angular.z * half)
+        left = msg.linear.x - wz * half
+        right = msg.linear.x + wz * half
 
         left, right = self.to_wheel_cmds(left, right)
         self.send({'T': 1, 'L': round(left, 3), 'R': round(right, 3)})
         self.last_cmd_time = self.get_clock().now()
+
+    def angular_gain(self, forward, turn):
+        """Vloeiend van `curve_gain` (vooral vooruit) naar `spin_gain` (op de plaats draaien)."""
+        total = abs(forward) + abs(turn)
+        if total < 1e-6:
+            return 1.0
+        straightness = abs(forward) / total
+        return self.curve_gain * straightness + self.spin_gain * (1.0 - straightness)
 
     def to_wheel_cmds(self, left, right):
         """Wielsnelheden (m/s) -> wielwaarden voor T:1.

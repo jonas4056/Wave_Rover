@@ -3,8 +3,8 @@
 # footprint, Regulated Pure Pursuit (0,28 m/s, niet afremmen in bochten) en AMCL afgestemd op odometrie
 # zonder encoders. De uitgang gaat naar /cmd_vel_nav2, een ingang van twist_mux.
 # Alle snelheidscommando's als TwistStamped (enable_stamped_cmd_vel), zoals twist_mux verwacht.
-# Draaien gebeurt bewust snel (2,0 rad/s gevraagd): een skid-steer moet bij het draaien op de
-# plaats eerst de zijdelingse wrijving overwinnen; de werkelijke draaisnelheid ligt lager.
+# Draaisnelheden zijn sinds de draaicorrectie in de bridge (23-10-2026) echte waarden:
+# op de plaats draaien aan 1,2 rad/s.
 # RPP beperkt de draaiversnelling t.o.v. de GEMETEN draaisnelheid; staat de robot stil, dan
 # blijft het commando hangen op max_angular_accel / controller_frequency. Daarom staat die grens
 # hoog en doet de velocity_smoother (open loop) het geleidelijk optrekken.
@@ -114,7 +114,7 @@ controller_server:
       approach_velocity_scaling_dist: 0.4
       use_rotate_to_heading: true
       rotate_to_heading_min_angle: 1.05
-      rotate_to_heading_angular_vel: 2.0
+      rotate_to_heading_angular_vel: 1.2
       max_angular_accel: 50.0
       allow_reversing: false
       use_collision_detection: true

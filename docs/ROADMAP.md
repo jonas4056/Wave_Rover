@@ -172,6 +172,12 @@ krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft e
 NVIDIA-GPU.
 
 ### Systeeminstellingen op de Jetson (buiten de repo)
+- **NVMe: nooit DISCARD sturen.** Op 23-10-2026 vastgelegd: de SPCC-SSD (MAXIO MAP1202) loopt
+  vast op een DISCARD-opdracht (`req_op:DISCARD ... timeout, reset controller`), waarna alle
+  schrijfopdrachten blokkeren. Oplossing: udev-regel `/etc/udev/rules.d/60-nvme-no-discard.rules`
+  (`discard_max_bytes=0`) en `fstrim.timer` uitgeschakeld.
+- Openstaand: `kernel.hung_task_panic=1` stond aan maar de Jetson herstartte niet vanzelf toen
+  de schijf vastzat; uitzoeken waarom (panic of hardware-watchdog).
 - NVMe-energiebesparing (APST) uit: `nvme_core.default_ps_max_latency_us=0` in
   `/boot/extlinux/extlinux.conf`. De Silicon Power-SSD (MAXIO MAP1202) viel anders
   willekeurig weg. Een backup staat in `extlinux.conf.bak`.
