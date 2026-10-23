@@ -146,6 +146,13 @@ rijden.
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
 
+### Optimalisaties (CPU/RAM sparen voor de AI)
+- [ ] Nav2 met `use_composition` (één proces i.p.v. ±12)
+- [ ] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (~150 Hz); bespaart CPU in crsf_joy,
+      rc_teleop en twist_mux
+- [ ] Zware Python-nodes (esp32_bridge, lidar_odom_fix) eventueel naar C++
+- [ ] Meten met `ssh -t jetson htop` en `tegrastats` voor en na
+
 ### Fase 4 – Camera en beeldherkenning op de GPU
 - [ ] CSI-camera in de container (Argus op JetPack 7 testen)
 - [ ] Objectdetectie met TensorRT (bv. YOLO) → objecten worden op de kaart aangeduid
