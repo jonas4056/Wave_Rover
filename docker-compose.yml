@@ -12,18 +12,19 @@ services:
     ipc: host
     # Volledige toegang tot /dev (USB-serieel, UART, camera); eenvoudig voor een hobbyrobot.
     privileged: true
-    runtime: nvidia
-    # Groep i2c van de Jetson (gid 114), voor de batterijmeting van de UPS op /dev/i2c-7.
+    # GPU via CDI (/etc/cdi/nvidia.yaml, gemaakt door scripts/install_gpu.sh).
+    devices:
+      - nvidia.com/gpu=all
     group_add:
-      - "114"
+      - "114"  # i2c: batterijmeting van de UPS op /dev/i2c-7
+      - "44"   # video: GPU
+      - "993"  # render: GPU
     environment:
       - ROS_DOMAIN_ID=0
       - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
       # Geen shared memory: na een harde crash blijven er anders oude segmenten in /dev/shm
       # achter, waardoor lokale nodes elkaar niet meer horen.
       - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
     volumes:
       - ./:/home/ubuntu/wave_rover
       - /dev:/dev

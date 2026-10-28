@@ -1,5 +1,4 @@
 # Wave Rover – ROS 2 Jazzy op de Jetson Orin Nano (JetPack 7.2)
-# Basisimage kan in fase 4 vervangen worden door een Isaac ROS-image.
 FROM ros:jazzy-ros-base
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -34,6 +33,23 @@ RUN mkdir -p /opt/thirdparty_ws/src && cd /opt/thirdparty_ws/src \
     && cd /opt/thirdparty_ws && . /opt/ros/jazzy/setup.sh \
     && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
     && rm -rf build log
+
+# GPU (fase 4): TensorRT en de CUDA-runtime uit de Jetson-repository van NVIDIA. De
+# GPU-driver zelf (libcuda) komt bij het starten van de host via CDI (/etc/cdi/nvidia.yaml,
+# scripts/install_gpu.sh). L4T moet overeenkomen met de JetPack-versie van de Jetson.
+ARG L4T=r39.2
+ADD https://repo.download.nvidia.com/jetson/jetson-ota-public.asc /etc/apt/trusted.gpg.d/
+RUN chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc \
+    && echo "deb https://repo.download.nvidia.com/jetson/common $L4T main" \
+        > /etc/apt/sources.list.d/nvidia-jetson.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        cuda-cudart-13-2 \
+        libnvinfer-bin \
+        python3-libnvinfer \
+        python3-numpy \
+        python3-pil \
+        ros-jazzy-vision-msgs \
+    && rm -rf /var/lib/apt/lists/*
 
 # Werk als gewone gebruiker (uid 1000 = jonas op de Jetson), zodat build/ en
 # install/ niet van root worden. Groepen geven toegang tot seriële poorten en camera.

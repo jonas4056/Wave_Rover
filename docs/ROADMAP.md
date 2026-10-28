@@ -165,10 +165,22 @@ rijden.
       47 -> 36 processen
 
 ### Fase 4 – Camera en beeldherkenning op de GPU
-- [ ] CSI-camera in de container (Argus op JetPack 7 testen)
-- [ ] Objectdetectie met TensorRT (bv. YOLO) → objecten worden op de kaart aangeduid
-- [ ] Camera in ROS als module (`/camera/image/compressed`, hardware-JPEG via GStreamer op de host)
-      en live in het dashboard
+- [x] CSI-camera: Argus draait op de host (GStreamer, hardware-JPEG), de container krijgt de
+      beelden via TCP
+- [x] Camera in ROS als module (`/camera/image/compressed`, 30 fps) en live in het dashboard;
+      `/camera/image_low/compressed` (10 Hz) voor herkenning. Een topic zonder luisteraars
+      wordt niet gepubliceerd; de health-controle kijkt naar `/camera/frames` (1 Hz-teller)
+- [x] GPU in de container: TensorRT 10.16 + CUDA 13.2 in het image, driver via CDI
+- [x] Module `detection`: YOLO26n (COCO, 80 klassen) met TensorRT FP16 -> `/detections`.
+      Model in `~/wave_rover/models` (`scripts/export_yolo.sh`); engine wordt de eerste keer
+      gebouwd (±6 min, daarna enkele seconden). Gemeten 28-10-2026 aan 10 Hz: 19% van één
+      kern, ~680 MB RAM (waarvan ~320 MB gedeelde CUDA/TensorRT-bibliotheken), GPU 4 ms per
+      beeld op volle klok (12 ms bij 10 Hz: de GPU klokt tussen de beelden terug)
+- [ ] Detecties in het dashboard (kaders over het camerabeeld)
+- [ ] JPEG decoderen in hardware of ruwe beelden via de VIC van de host (nu 9 ms CPU per beeld)
+- [ ] Objecten op de kaart aanduiden (richting uit het beeld + lidar-afstand)
+- [ ] Open woordenschat (bv. YOLOE / YOLO-World): zoeken naar willekeurige woorden i.p.v.
+      enkel de 80 COCO-klassen
 - [ ] Beeldfuncties (zoals de Waveshare UGV Rover): objectherkenning, gezichtsdetectie,
       gebaren, kleurherkenning, bewegingsdetectie, lijn volgen
 - [ ] Diepte: eerst monoculair (Depth Anything op de GPU); later eventueel een OAK-D (Lite)
@@ -205,6 +217,11 @@ krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft e
 NVIDIA-GPU.
 
 ### Systeeminstellingen op de Jetson (buiten de repo)
+- **Geen bureaublad:** `systemctl set-default multi-user.target` (28-10-2026). Bespaart ~230 MB
+  RAM. Tijdelijk terug met een scherm: `sudo systemctl start gdm`; blijvend:
+  `sudo systemctl set-default graphical.target`.
+- **GPU voor Docker via CDI:** `/etc/cdi/nvidia.yaml` (`scripts/install_gpu.sh`). Opnieuw
+  maken na een JetPack-update; `L4T` in de Dockerfile dan ook aanpassen.
 - **Batterijcellen UPS:** de UPS laadt de 3 cellen in serie zonder balancing. Op 28-10-2026
   stond na een afsluiting één cel op 2,66 V (andere 4,2 V); de UPS-beveiliging koppelde de
   batterij los (geen stroom zonder adapter, lader meet 13,3 V/0 A). Af en toe de cellen in een

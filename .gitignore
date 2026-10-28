@@ -15,3 +15,6 @@ maps/
 
 # Verzoekbestanden van power_guard op de Jetson
 run/
+
+# AI-modellen (groot; zie scripts/export_yolo.sh) en TensorRT-engines (per Jetson gebouwd)
+models/

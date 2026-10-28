@@ -36,7 +36,13 @@ modules:
     launch: camera.launch.py
     # Camera op de host altijd uitzetten, ook na een crash van camera_bridge.
     on_stop: [rm, -f, /home/ubuntu/wave_rover/run/camera_on]
-    health: {topic: /camera/image/compressed, type: sensor_msgs/msg/CompressedImage, timeout: 5.0}
+    health: {topic: /camera/frames, type: std_msgs/msg/UInt32, timeout: 5.0}
+  detection:
+    description: Objectherkenning (YOLO26n op de GPU, 10 Hz) -> /detections
+    package: wave_rover_bringup
+    launch: detection.launch.py
+    # Geen health-controle: de eerste start bouwt het TensorRT-engine (enkele minuten).
+    requires: [camera]
   voice:
     description: Yahboom-spraakmodule (commando's, batterijmeldingen, noodstop)
     package: wave_rover_bringup
