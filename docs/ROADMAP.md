@@ -161,6 +161,8 @@ rijden.
 - [x] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (150 Hz). Daarbij gevonden: de UART werd
       per 256 bytes gelezen, waardoor pakketten per ~7 en tot 50 ms te laat kwamen; nu direct
 - [ ] Zware Python-nodes (esp32_bridge, lidar_odom_fix) eventueel naar C++
+- [ ] pose_saver naar C++: TF ontvangen (40 berichten/s) kost in Python alleen al ~6% van
+      een kern; met de obstakels voor het dashboard samen ~13% (gemeten 28-10-2026)
 - [x] Gemeten (28-10-2026, navigatie aan, stilstaand): CPU 1,78 -> 1,11 kernen, geheugen ROS 2049 -> 1584 MB,
       47 -> 36 processen
 

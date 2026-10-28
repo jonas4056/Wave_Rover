@@ -20,6 +20,9 @@ const MapView = (() => {
   let mapImage = null;     // offscreen canvas met de kaart (1 pixel per cel)
   let robot = null;        // {x, y, yaw}
   let plan = [];           // [{x, y}]
+  // Obstakels rond de robot (pose_saver): {points: [x1, y1, ...] in cm, time}
+  const obstacles = { lidar: { points: [], time: 0 }, floor: { points: [], time: 0 } };
+  const OBSTACLE_TIMEOUT = 2000;  // ms: geen nieuws (module uit) = niet meer tonen
   let view = { scale: 40, cx: 0, cy: 0 };  // pixels per meter, wereldpunt in het midden
   let mode = 'pan';
   let dirty = true;
@@ -89,6 +92,11 @@ const MapView = (() => {
 
   function onPlan(msg) {
     plan = msg.poses.map((p) => ({ x: p.pose.position.x, y: p.pose.position.y }));
+    dirty = true;
+  }
+
+  function onObstacles(kind, msg) {
+    obstacles[kind] = { points: msg.data, time: performance.now() };
     dirty = true;
   }
 
@@ -162,6 +170,19 @@ const MapView = (() => {
       ctx.stroke();
     }
 
+    // Oranje = lidar (live), rood = camera (lage obstakels, met geheugen).
+    const now = performance.now();
+    const dot = Math.max(2, Math.min(5, 0.04 * view.scale));
+    [['lidar', '#f5a142'], ['floor', '#f25c5c']].forEach(([kind, color]) => {
+      const o = obstacles[kind];
+      if (now - o.time > OBSTACLE_TIMEOUT) return;
+      ctx.fillStyle = color;
+      for (let i = 0; i + 1 < o.points.length; i += 2) {
+        const s = worldToScreen(o.points[i] / 100, o.points[i + 1] / 100);
+        ctx.fillRect(s.x - dot / 2, s.y - dot / 2, dot, dot);
+      }
+    });
+
     if (robot) drawArrow(robot.x, robot.y, robot.yaw, '#409cff', 12);
 
     if (gesture.pick) {
@@ -171,6 +192,12 @@ const MapView = (() => {
   }
 
   function loop() {
+    // Verlopen obstakels wegwerken, ook zonder nieuwe berichten.
+    const now = performance.now();
+    if (Object.values(obstacles).some((o) => o.points.length && now - o.time > OBSTACLE_TIMEOUT)) {
+      Object.values(obstacles).forEach((o) => { if (now - o.time > OBSTACLE_TIMEOUT) o.points = []; });
+      dirty = true;
+    }
     if (dirty) {
       dirty = false;
       draw();
@@ -302,6 +329,10 @@ const MapView = (() => {
     topic('/map', 'nav_msgs/msg/OccupancyGrid', { throttle_rate: 5000, queue_length: 1 }).subscribe(onMap);
     topic('/robot_pose', 'geometry_msgs/msg/PoseStamped', { throttle_rate: 200 }).subscribe(onPose);
     topic('/plan', 'nav_msgs/msg/Path', { throttle_rate: 1000, queue_length: 1 }).subscribe(onPlan);
+    topic('/dashboard/lidar_points', 'std_msgs/msg/Int16MultiArray', { throttle_rate: 500, queue_length: 1 })
+      .subscribe((m) => onObstacles('lidar', m));
+    topic('/dashboard/floor_points', 'std_msgs/msg/Int16MultiArray', { throttle_rate: 500, queue_length: 1 })
+      .subscribe((m) => onObstacles('floor', m));
     topic('/navigate_to_pose/_action/status', 'action_msgs/msg/GoalStatusArray', { throttle_rate: 500 })
       .subscribe(onNavStatus);
 
