@@ -150,6 +150,12 @@ rijden.
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
 
+### Navigatie- en rijprestaties verbeteren (zodra de UPS-batterij terug werkt)
+- [ ] Route strakker volgen en vloeiender bochten in auto-modus (RPP verder afstellen of
+      opnieuw MPPI proberen nu de draaisnelheid gekalibreerd is)
+- [ ] Lokalisatie tijdens het draaien (scans die even naast de muren liggen)
+- [ ] Testrondes met meerdere doelen, slaagpercentage bijhouden (demo: 6 van 11 aangekomen)
+
 ### Optimalisaties (CPU/RAM sparen voor de AI)
 - [ ] Nav2 met `use_composition` (één proces i.p.v. ±12)
 - [ ] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (~150 Hz); bespaart CPU in crsf_joy,
