@@ -123,46 +123,27 @@ function showShutdown(seconds) {
 // --- camera -------------------------------------------------------------------------
 
 // Alleen beelden ophalen als iemand kijkt: spaart wifi en CPU op de Jetson.
-// Beelden komen via HTTP van camera_bridge, telkens pas het volgende als het vorige op het
-// scherm staat: zo kan er nooit een achterstand opbouwen (via rosbridge liep die op tot
-// seconden). De kaders van de module detection komen wel via rosbridge.
-const CAMERA_URL = `http://${window.location.hostname}:8081/latest.jpg`;
-const CAMERA_MIN_INTERVAL = 66;  // ms: hoogstens ~15 beelden/s naar de gsm
+// Beelden komen als doorlopende MJPEG-stroom (640x360) van camera_bridge, niet via rosbridge:
+// die buffert onbeperkt, waardoor de vertraging tot seconden opliep. camera_bridge houdt de
+// zendbuffer klein en slaat beelden over als de gsm niet volgt. De kaders van de module
+// detection komen wel via rosbridge.
+const CAMERA_STREAM = `http://${window.location.hostname}:8081/stream.mjpg?fps=15`;
 let cameraOn = false;
-let cameraRun = 0;  // verhoogt bij elke start/stop, zodat een oude lus vanzelf stopt
 let detectionsTopic = null;
 let detectionsClear = null;
 const CAMERA_HINT = 'Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.';
 const CAMERA_SIZE = { w: 1280, h: 720 };  // kaders in /detections zijn in deze pixels
 
-async function cameraLoop(run) {
-  const img = $('camera-image');
-  let after = 0;
-  let previousUrl = null;
-  while (cameraOn && run === cameraRun) {
-    const started = performance.now();
-    try {
-      const res = await fetch(`${CAMERA_URL}?after=${after}`, { cache: 'no-store' });
-      if (res.status === 200) {
-        after = Number(res.headers.get('X-Frame')) || 0;
-        const url = URL.createObjectURL(await res.blob());
-        img.src = url;
-        await img.decode().catch(() => {});
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        previousUrl = url;
-        if (run === cameraRun) {
-          img.hidden = false;
-          $('camera-hint').hidden = true;
-        }
-      }
-    } catch (e) {
-      await new Promise((r) => setTimeout(r, 1000));  // camera start nog op
-    }
-    const wait = CAMERA_MIN_INTERVAL - (performance.now() - started);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  }
-  if (previousUrl) URL.revokeObjectURL(previousUrl);
+function showCameraImage() {
+  if (!cameraOn) return;
+  $('camera-image').hidden = false;
+  $('camera-hint').hidden = true;
 }
+$('camera-image').addEventListener('load', showCameraImage);
+$('camera-image').addEventListener('error', () => {
+  // Camera start nog op (of kort weg): opnieuw proberen.
+  if (cameraOn) setTimeout(() => { if (cameraOn) $('camera-image').src = `${CAMERA_STREAM}&t=${Date.now()}`; }, 1000);
+});
 
 function setCamera(on) {
   const btn = $('camera-toggle');
@@ -170,18 +151,20 @@ function setCamera(on) {
   btn.textContent = on ? 'Verberg beeld' : 'Toon beeld';
   const img = $('camera-image');
   img.hidden = true;  // pas tonen bij het eerste nieuwe beeld, niet het oude van vorige keer
+  cameraOn = false;  // eerst: het sluiten van de stroom mag geen herverbinding starten
+  img.src = '';
   img.removeAttribute('src');
   $('camera-hint').textContent = on ? 'Camera start…' : CAMERA_HINT;
   $('camera-hint').hidden = false;
   cameraOn = on;
-  cameraRun += 1;
   if (detectionsTopic) {
     detectionsTopic.unsubscribe();
     detectionsTopic = null;
   }
   drawDetections([]);
   if (!on) return;
-  cameraLoop(cameraRun);
+  img.src = `${CAMERA_STREAM}&t=${Date.now()}`;
+  setTimeout(showCameraImage, 3000);  // niet elke browser meldt 'load' bij een stroom
   if (ros && connected) {
     // Kaders van de module detection (10 Hz); niets als die uit staat.
     detectionsTopic = topic('/detections', 'vision_msgs/msg/Detection2DArray',

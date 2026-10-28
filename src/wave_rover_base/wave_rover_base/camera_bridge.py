@@ -11,8 +11,10 @@ Deze node:
   beeldherkenning die niet elk beeld nodig heeft. Een topic zonder luisteraars slaat hij over;
 - publiceert elke seconde het aantal beelden op camera/frames (voor de health-controle,
   zodat die niet de hele beeldstroom hoeft te ontvangen);
-- geeft het nieuwste voorbeeldbeeld (640x360, aparte stroom op `preview_port`) via HTTP
-  (`http_port`, /latest.jpg?after=<nr>) aan het dashboard.
+- geeft het voorbeeldbeeld (640x360, aparte stroom op `preview_port`) via HTTP aan het
+  dashboard (`http_port`): /stream.mjpg?fps=15 als doorlopende MJPEG-stroom met een kleine
+  zendbuffer (een trage gsm krijgt minder beelden, nooit oude), /latest.jpg?after=<nr> voor
+  één beeld.
   Het dashboard vraagt pas een volgend beeld als het vorige op het scherm staat, dus er kan
   geen achterstand ontstaan. Via rosbridge liep die bij een trage gsm op tot vele seconden.
 """
@@ -119,6 +121,10 @@ class CameraBridge(Node):
 
             def do_GET(self):
                 url = urlparse(self.path)
+                if url.path == '/stream.mjpg':
+                    fps = float(parse_qs(url.query).get('fps', ['15'])[0])
+                    self.stream(1.0 / max(1.0, min(fps, 30.0)))
+                    return
                 if url.path != '/latest.jpg':
                     self.send_error(404)
                     return
@@ -141,6 +147,33 @@ class CameraBridge(Node):
                 self.send_header('X-Frame', str(number))
                 self.end_headers()
                 self.wfile.write(jpeg)
+
+            def stream(self, period):
+                # Kleine zendbuffer: kan de gsm niet volgen, dan blokkeert het schrijven en
+                # sturen we daarna het nieuwste beeld (tussenliggende vallen weg). Zo blijft de
+                # vertraging hoogstens ~2 beelden, zonder per beeld een aanvraag te moeten doen.
+                self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 32768)
+                self.send_response(200)
+                self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                sent = 0
+                try:
+                    while rclpy.ok():
+                        started = time.monotonic()
+                        with bridge.frame_ready:
+                            if not bridge.frame_ready.wait_for(
+                                    lambda: bridge.latest_number > sent, 5.0):
+                                return  # camera gestopt
+                            sent, jpeg = bridge.latest_number, bridge.latest_jpeg
+                        self.wfile.write(b'--frame\r\nContent-Type: image/jpeg\r\n'
+                                         + f'Content-Length: {len(jpeg)}\r\n\r\n'.encode()
+                                         + jpeg + b'\r\n')
+                        rest = period - (time.monotonic() - started)
+                        if rest > 0:
+                            time.sleep(rest)
+                except OSError:
+                    pass  # gsm heeft de stroom gesloten
 
             def log_message(self, *args):
                 pass
