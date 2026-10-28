@@ -74,7 +74,7 @@ function subscribeAll() {
 
   cmdVel = topic('/cmd_vel_dashboard', 'geometry_msgs/msg/TwistStamped');
   estopService = new ROSLIB.Service({ ros, name: '/e_stop/set', serviceType: 'std_srvs/srv/SetBool' });
-  if (cameraTopic) setCamera(true);  // na herverbinding opnieuw abonneren
+  if (cameraOn) setCamera(true);  // na herverbinding opnieuw abonneren
   MapView.start(ros);
   MapsCard.start(ros);
 }
@@ -123,11 +123,46 @@ function showShutdown(seconds) {
 // --- camera -------------------------------------------------------------------------
 
 // Alleen beelden ophalen als iemand kijkt: spaart wifi en CPU op de Jetson.
-let cameraTopic = null;
+// Beelden komen via HTTP van camera_bridge, telkens pas het volgende als het vorige op het
+// scherm staat: zo kan er nooit een achterstand opbouwen (via rosbridge liep die op tot
+// seconden). De kaders van de module detection komen wel via rosbridge.
+const CAMERA_URL = `http://${window.location.hostname}:8081/latest.jpg`;
+const CAMERA_MIN_INTERVAL = 66;  // ms: hoogstens ~15 beelden/s naar de gsm
+let cameraOn = false;
+let cameraRun = 0;  // verhoogt bij elke start/stop, zodat een oude lus vanzelf stopt
 let detectionsTopic = null;
 let detectionsClear = null;
 const CAMERA_HINT = 'Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.';
 const CAMERA_SIZE = { w: 1280, h: 720 };  // kaders in /detections zijn in deze pixels
+
+async function cameraLoop(run) {
+  const img = $('camera-image');
+  let after = 0;
+  let previousUrl = null;
+  while (cameraOn && run === cameraRun) {
+    const started = performance.now();
+    try {
+      const res = await fetch(`${CAMERA_URL}?after=${after}`, { cache: 'no-store' });
+      if (res.status === 200) {
+        after = Number(res.headers.get('X-Frame')) || 0;
+        const url = URL.createObjectURL(await res.blob());
+        img.src = url;
+        await img.decode().catch(() => {});
+        if (previousUrl) URL.revokeObjectURL(previousUrl);
+        previousUrl = url;
+        if (run === cameraRun) {
+          img.hidden = false;
+          $('camera-hint').hidden = true;
+        }
+      }
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 1000));  // camera start nog op
+    }
+    const wait = CAMERA_MIN_INTERVAL - (performance.now() - started);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  }
+  if (previousUrl) URL.revokeObjectURL(previousUrl);
+}
 
 function setCamera(on) {
   const btn = $('camera-toggle');
@@ -138,21 +173,16 @@ function setCamera(on) {
   img.removeAttribute('src');
   $('camera-hint').textContent = on ? 'Camera start…' : CAMERA_HINT;
   $('camera-hint').hidden = false;
-  if (cameraTopic) {
-    cameraTopic.unsubscribe();
-    cameraTopic = null;
+  cameraOn = on;
+  cameraRun += 1;
+  if (detectionsTopic) {
     detectionsTopic.unsubscribe();
     detectionsTopic = null;
   }
   drawDetections([]);
-  if (on && ros && connected) {
-    cameraTopic = topic('/camera/image/compressed', 'sensor_msgs/msg/CompressedImage',
-      { throttle_rate: 100, queue_length: 1 });
-    cameraTopic.subscribe((m) => {
-      img.src = `data:image/jpeg;base64,${m.data}`;
-      img.hidden = false;
-      $('camera-hint').hidden = true;
-    });
+  if (!on) return;
+  cameraLoop(cameraRun);
+  if (ros && connected) {
     // Kaders van de module detection (10 Hz); niets als die uit staat.
     detectionsTopic = topic('/detections', 'vision_msgs/msg/Detection2DArray',
       { throttle_rate: 100, queue_length: 1 });
@@ -197,7 +227,7 @@ function drawDetections(detections) {
 }
 
 $('camera-toggle').addEventListener('click', () => {
-  const on = cameraTopic === null;
+  const on = !cameraOn;
   // De module camera gaat mee aan (uitzetten doe je bij de modules).
   // Elke andere toestand dan aan/start (uit, fout of nog onbekend): aanzetten.
   const state = lastModules.camera && lastModules.camera.state;
@@ -207,7 +237,7 @@ $('camera-toggle').addEventListener('click', () => {
   setCamera(on);
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && cameraTopic) setCamera(false);
+  if (document.hidden && cameraOn) setCamera(false);
 });
 
 // --- noodstop -----------------------------------------------------------------------
