@@ -22,7 +22,7 @@ for t, name in (("ups/battery", "Jetson "), ("chassis/battery", "Chassis")):
 PY'
 
 echo "== Modules"
-ssh jetson 'cd ~/wave_rover && docker compose exec -T ros /entrypoint.sh bash -c "timeout 6 ros2 topic echo /modules/status --once --field data 2>/dev/null"' \
+ssh jetson 'cd ~/wave_rover && docker compose exec -T ros /entrypoint.sh bash -c "timeout 10 ros2 topic echo /modules/status std_msgs/msg/String --once --field data 2>/dev/null"' \
     | python3 -c 'import json, sys
 for name, module in json.loads(sys.stdin.readline()).items():
     print("  %-12s %s" % (name, module["state"]))' \
