@@ -127,6 +127,32 @@ muren.
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
 rijden.
 
+### Waar we gebleven zijn (stand 28-10-2026, einde van de dag)
+Werkt en getest vandaag: RC aan 150 Hz (UART-fix), objectherkenning en vloerobstakels op de
+GPU, vloeiende camerabeelden in de app (MJPEG 640x360), oranje/rode obstakelstippen op de
+kaart, "Zoek mezelf op de kaart", gyronulpunt (de robot draaide op de kaart), de app laadt
+zichzelf na een update, hotspot `WaveRover` als er geen bekend wifinetwerk is (met de iPhone
+getest).
+
+Opstarten: Jetson aanzetten, thuis komt hij vanzelf op de wifi; app openen; modules aanzetten
+in de app. Gebruik je de app al lang open? Hij herlaadt zichzelf na een update.
+
+Volgende stappen, in deze volgorde:
+1. **Zelf verkennen** (module `explore`): slam_toolbox in kaartmodus + Nav2 + een lichte
+   frontier-verkenner (rand tussen bekend en onbekend opzoeken en ernaartoe rijden), kaart
+   automatisch opslaan als hij klaar is, knop in de app. Nodig: de robot moet echt rijden,
+   dus eerst de batterij in orde.
+2. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
+3. Lokalisatie tijdens het draaien opnieuw testen (kan door het gyronulpunt opgelost zijn).
+4. Later: spraak (USB-luidspreker + Piper), VLM-scènebeschrijving, detectie en vloerobstakels
+   in één proces.
+
+Te controleren:
+- **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
+  warm. Als ze vol is (4,2 V): een dag laten rusten en meten. Boven ~4,1 V = waarschijnlijk
+  oké; duidelijk lager = vervangen.
+- `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
+
 ### Openstaand (stand 21-10-2026)
 - [ ] Lidar steviger bevestigen (M2,5-standoffs), daarna kaart `living_v3` maken met de
       gecorrigeerde odometrie en de navigatie daarop testen
