@@ -139,7 +139,28 @@ local_costmap:
       resolution: 0.05
       plugins:
       - voxel_layer
+      - floor_layer
       - inflation_layer
+      floor_layer:
+        # Lage obstakels van de camera (module floor_obstacles). Een eigen laag: de lidar
+        # scant erover en mag ze dus niet wissen. Vlak voor de camera ziet ze de vloer niet
+        # (blinde zone): daar niets wissen, anders verdwijnt een obstakel als je ernaartoe rijdt.
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: floor_scan
+        floor_scan:
+          topic: /floor_scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          inf_is_valid: true
+          max_obstacle_height: 2.0
+          # Iets onder range_max (1,5): Nav2 maakt van inf een punt op 1,4999 m; dat mag
+          # wel wissen maar geen obstakel worden.
+          obstacle_max_range: 1.45
+          obstacle_min_range: 0.0
+          raytrace_max_range: 1.5
+          raytrace_min_range: 0.35
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 6.0
@@ -181,7 +202,28 @@ global_costmap:
       plugins:
       - static_layer
       - obstacle_layer
+      - floor_layer
       - inflation_layer
+      floor_layer:
+        # Lage obstakels van de camera (module floor_obstacles). Een eigen laag: de lidar
+        # scant erover en mag ze dus niet wissen. Vlak voor de camera ziet ze de vloer niet
+        # (blinde zone): daar niets wissen, anders verdwijnt een obstakel als je ernaartoe rijdt.
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: floor_scan
+        floor_scan:
+          topic: /floor_scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          inf_is_valid: true
+          max_obstacle_height: 2.0
+          # Iets onder range_max (1,5): Nav2 maakt van inf een punt op 1,4999 m; dat mag
+          # wel wissen maar geen obstakel worden.
+          obstacle_max_range: 1.45
+          obstacle_min_range: 0.0
+          raytrace_max_range: 1.5
+          raytrace_min_range: 0.35
       obstacle_layer:
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true

@@ -80,11 +80,12 @@
       <material name="sensor"/>
     </visual>
   </link>
-  <!-- Camera ligt plat op het chassis, in het midden, 4 cm van de voorrand. -->
+  <!-- Camera ligt plat op het chassis, in het midden, 4 cm van de voorrand; midden van de
+       lens 10,5 cm boven de vloer (gemeten 28-10-2026). -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="${body_length/2 - 0.04} 0 ${body_height/2 + 0.015}"/>
+    <origin xyz="${body_length/2 - 0.04} 0 ${0.105 - wheel_radius}"/>
   </joint>
 
 </robot>

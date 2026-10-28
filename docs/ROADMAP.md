@@ -186,9 +186,18 @@ rijden.
 - [ ] Diepte: eerst monoculair (Depth Anything op de GPU); later eventueel een OAK-D (Lite)
       i.p.v. twee losse IMX219's als stereo (geen hardware-sync, stijve montage nodig)
 - [ ] Kleurzweem (paars beeld): NoIR-module of ontbrekende ISP-kalibratie uitzoeken
-- [ ] **Lage obstakels** (speelgoed, kabels): de lidar scant op 20 cm hoogte en ziet die niet.
-      Opties: dieptebeeld uit de camera (bv. Depth Anything op de GPU) als extra laag in de
-      costmap, en/of goedkope ToF-/ultrasone sensoren laag vooraan als vangnet
+- [x] **Lage obstakels** (speelgoed, kabels; de lidar scant op 20 cm): module `floor_obstacles`.
+      Depth Anything V2 Small (TensorRT) + vaste cameragegevens: alles wat uit de vloer steekt
+      wordt een punt op `/floor_scan` (virtuele lidar op vloerhoogte), in Nav2 een eigen laag
+      `floor_layer` (de lidar mag ze niet wissen; blinde zone < 0,35 m wordt niet gewist).
+      Gekalibreerd 28-10-2026 (`scripts/calibrate_floor.py`): lens 10,5 cm hoog, f 989,5 px,
+      quasi waterpas. Getest stilstaand: bal (9 cm) op 60 cm correct in de costmap (±3 cm).
+      Kost aan 5 Hz: 16% van één kern, ~590 MB RAM (waarvan ~300 MB gedeeld met CUDA)
+- [ ] Rijtest: navigeren naar een doel achter een bal/kabel (rijdt hij er omheen?)
+- [ ] Enkel vooruit zichtbaar (66 graden) en blinde zone vlak voor de robot; eventueel
+      goedkope ToF-sensoren laag vooraan als vangnet
+- [ ] Detectie en vloerobstakels in één proces (één CUDA-context en één keer decoderen,
+      spaart ±250 MB RAM als ze samen aan staan)
 - [ ] Isaac ROS 4.6 op de Orin Nano testen (cuVSLAM en eventueel nvblox voor 3D-obstakels)
 
 **Klaar wanneer:** de robot detecties zoals "tv" en "zetel" in realtime op de kaart
@@ -208,7 +217,10 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
 - [ ] USB-microfoon en luidspreker
 - [ ] Wekwoord → spraakherkenning (Whisper) → taalmodel met "tools" (naar een locatie rijden,
   rondkijken, een foto beschrijven) → spraak (Piper TTS)
-- [ ] Een beeldtaalmodel (VLM) beantwoordt vragen over wat de camera ziet
+- [ ] Een beeldtaalmodel (VLM) beschrijft wat de camera ziet en zegt het luidop (voorkeur van
+      Jonas boven een open-woordenschat-detector; niet realtime is oké)
+- [ ] Spraak uit: USB-luidspreker (eerst zonder microfoon) + Piper TTS; later een Jabra
+      (microfoon + luidspreker) voor spraakbediening
 - [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
 
 **Aandachtspunt:** de 8 GB geheugen wordt gedeeld door ROS, Nav2 en de AI-modellen.

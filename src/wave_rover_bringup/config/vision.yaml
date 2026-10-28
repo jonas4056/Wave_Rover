@@ -1,0 +1,13 @@
+# Beeldherkenning (wave_rover_vision).
+floor_obstacles:
+  ros__parameters:
+    rate: 5.0
+    # Kalibratie van de camera t.o.v. de vloer (pixels van het 1280x720-beeld).
+    # Opnieuw bepalen na het verplaatsen van de camera: scripts/calibrate_floor.py
+    camera_height: 0.105  # midden van de lens boven de vloer (gemeten)
+    # 28-10-2026 met een bal (9,25 cm) op 30 en 60 cm: rij 672 en 532. Controle: breedte van
+    # de bal op 30 cm berekend 262 px, gemeten 264 px.
+    focal_length: 989.5   # px; horizontale beeldhoek 66 graden
+    pitch: -0.011         # rad, + = naar beneden (camera staat zo goed als waterpas)
+    max_range: 1.5
+    threshold: 0.15
