@@ -195,6 +195,9 @@ NVIDIA-GPU.
   stond na een afsluiting één cel op 2,66 V (andere 4,2 V); de UPS-beveiliging koppelde de
   batterij los (geen stroom zonder adapter, lader meet 13,3 V/0 A). Af en toe de cellen in een
   losse lader balanceren; zwakke cel vervangen als ze na een dag rust duidelijk lager staat.
+  Let op: zonder (aangesloten) batterij meet de UPS de adapter en schommelt de waarde
+  (12,4-13,6 V); boven 12,8 V toont het dashboard "geen batterij", daaronder is de meting
+  misleidend. Laadstroom 0 A met adapter betekent dus niet altijd "vol".
 - Afsluiten bij lege batterij: `power_guard` (container) maakt `~/wave_rover/run/shutdown_request`
   aan als de UPS 30 s onder 20% zit (waarschuwing vanaf 30%) en de aftelling van 60 s afloopt; `wave-rover-shutdown.path`
   ziet dat en voert `systemctl poweroff` uit. Installeren: `scripts/install_power_guard.sh`.

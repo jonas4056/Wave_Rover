@@ -87,9 +87,11 @@ function showBattery(which, msg) {
   const sub = $(`bat-${which}-sub`);
   const pct = Math.round(msg.percentage * 100);
   if (!msg.present || Number.isNaN(pct)) {
-    value.textContent = '–';
-    value.className = 'stat-value';
-    sub.textContent = 'geen meting';
+    // UPS: spanning boven een vol pakket = adapter gemeten, batterij afwezig of losgekoppeld.
+    const disconnected = which === 'ups' && msg.voltage > 12.8;
+    value.textContent = disconnected ? 'geen batterij' : '–';
+    value.className = `stat-value ${disconnected ? 'warn' : ''}`;
+    sub.textContent = disconnected ? 'adapter / beveiliging' : 'geen meting';
     return;
   }
   // Tijdens het laden leest het percentage te hoog: dan "laadt" tonen.
