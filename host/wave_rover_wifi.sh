@@ -8,7 +8,7 @@
 # - Hotspot aan en al RETRY s geen enkel toestel verbonden: hotspot uit, zodat
 #   NetworkManager een bekend netwerk kan zoeken (bv. de router thuis was even weg).
 #   Niets gevonden: na WAIT s opnieuw de hotspot.
-# Kost niets: om de CHECK s een nmcli-opvraging.
+# Kost bijna niets: om de CHECK s een iw-opvraging.
 HOTSPOT=WaveRover-hotspot
 WAIT=60
 RETRY=300
@@ -20,12 +20,15 @@ if [ -z "$IFACE" ]; then
     exit 1
 fi
 
-# Naam van de verbinding als de wifikaart verbonden is, anders leeg (één nmcli-aanroep:
-# eerst "100 (connected)", dan de naam).
+# "hotspot", "wifi" (verbonden met een netwerk) of leeg. Met iw i.p.v. nmcli: iw vraagt het
+# rechtstreeks aan de wifikaart, nmcli start telkens een D-Bus-client (~40 ms CPU).
 connected() {
-    local out
-    out=$(nmcli -g GENERAL.STATE,GENERAL.CONNECTION device show "$IFACE" 2>/dev/null)
-    [ "${out%% *}" = 100 ] && echo "${out#*$'\n'}"
+    local info
+    info=$(iw dev "$IFACE" info 2>/dev/null)
+    case "$info" in
+        *"type AP"*) echo hotspot ;;
+        *ssid*) echo wifi ;;
+    esac
 }
 
 clients() {
@@ -42,7 +45,7 @@ while true; do
         # bekend netwerk eerst WAIT s.
         lost=$now
     fi
-    if [ "$conn" = "$HOTSPOT" ]; then
+    if [ "$conn" = hotspot ]; then
         if [ "$(clients)" -gt 0 ]; then
             idle=$now
         elif [ $((now - idle)) -ge $RETRY ]; then
