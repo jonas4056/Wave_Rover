@@ -5,9 +5,13 @@ richtingen, van grof naar fijn:
 1. "Waarschijnlijkheidsveld": hoe dicht bij een muur ligt elke cel (vervaagde muren).
 2. Grof: elke vrije cel op 10 cm, elke 5 graden; score = gemiddelde veldwaarde onder de
    scanpunten. Daarna de beste kandidaten fijn bijstellen (2,5 cm, 1 graad).
-3. Zeker genoeg als de beste plek goed past en duidelijk beter is dan de beste andere plek
+3. Controle per straal: voor de beste kandidaten wordt elke lidarstraal door de kaart
+   getrokken. Klopt de gemeten afstand met de eerste muur op die lijn, of "kijkt" de straal
+   door een muur? Het veld alleen ziet dat laatste niet; deze controle wel, en die maakt
+   het verschil tussen twee plekken die op elkaar lijken.
+4. Zeker genoeg als de beste plek goed past en duidelijk beter is dan de beste andere plek
    (in een symmetrische ruimte lijken twee plekken soms op elkaar).
-Enkel numpy: ~1-3 s CPU per zoekopdracht, niets als er niet gezocht wordt.
+Enkel numpy: ~1 s CPU per zoekopdracht, niets als er niet gezocht wordt.
 """
 import math
 import os
@@ -15,6 +19,8 @@ import os
 import numpy as np
 import yaml
 from PIL import Image
+
+MAX_RANGE = 10.0  # m; verder gebruiken we de lidar niet
 
 
 class OccupancyMap:
@@ -78,22 +84,31 @@ class Field:
         return vals.mean(axis=1)
 
 
-def scan_points(ranges, angle_min, angle_increment, range_min, range_max, offset, count):
-    """Lidarscan -> hoogstens `count` punten (n x 2) in het robotframe."""
-    r = np.asarray(ranges, np.float32)
-    a = angle_min + np.arange(len(r)) * angle_increment
-    ok = np.isfinite(r) & (r > max(range_min, 0.05)) & (r < min(range_max, 10.0))
-    r, a = r[ok], a[ok]
-    if len(r) > count:
-        idx = np.linspace(0, len(r) - 1, count).astype(int)
-        r, a = r[idx], a[idx]
-    ox, oy, oyaw = offset
-    x, y = r * np.cos(a + oyaw), r * np.sin(a + oyaw)
-    return np.stack([ox + x, oy + y], 1).astype(np.float32)
+class Scan:
+    """Lidarscan, uitgedund tot hoogstens `count` geldige stralen.
+
+    angles/ranges: in het lidarframe; offset: (x, y, yaw) van de lidar op de robot;
+    points: de gemeten punten (n x 2) in het robotframe.
+    """
+
+    def __init__(self, ranges, angle_min, angle_increment, range_min, range_max, offset,
+                 count=180):
+        r = np.asarray(ranges, np.float32)
+        a = angle_min + np.arange(len(r)) * angle_increment
+        ok = np.isfinite(r) & (r > max(range_min, 0.05)) & (r < min(range_max, MAX_RANGE))
+        r, a = r[ok], a[ok]
+        if len(r) > count:
+            idx = np.linspace(0, len(r) - 1, count).astype(int)
+            r, a = r[idx], a[idx]
+        self.angles, self.ranges, self.offset = a, r, offset
+        ox, oy, oyaw = offset
+        x, y = r * np.cos(a + oyaw), r * np.sin(a + oyaw)
+        self.points = np.stack([ox + x, oy + y], 1).astype(np.float32)
 
 
-def localize(occ_map, points, robot_radius=0.12):
+def localize(occ_map, scan, robot_radius=0.12):
     """Zoekt de pose (x, y, yaw) van de robot. Geeft (pose, score, tweede_score)."""
+    points = scan.points
     res = occ_map.resolution
     factor = max(1, int(round(0.10 / res)))
     coarse_res = res * factor
@@ -105,7 +120,7 @@ def localize(occ_map, points, robot_radius=0.12):
     clearance = blur(occ_map.occupied, robot_radius / res / 2) < 0.05
     free = downsample(occ_map.free & clearance, factor, 'all')
     rows, cols = np.nonzero(free)
-    if len(rows) == 0:
+    if len(rows) == 0 or len(points) == 0:
         return None, 0.0, 0.0
     cx = occ_map.origin[0] + (cols + 0.5) * coarse_res
     cy = occ_map.origin[1] + (rows + 0.5) * coarse_res
@@ -128,10 +143,36 @@ def localize(occ_map, points, robot_radius=0.12):
             if len(candidates) == 25:
                 break
 
-    refined = sorted((refine(fine, points, c) for c in candidates), key=lambda r: -r[1])
-    best_pose, best = refined[0]
-    second = max((s for p, s in refined[1:] if not similar(p, best_pose)), default=0.0)
+    poses = [refine(fine, points, c)[0] for c in candidates]
+    checked = sorted(((p, beam_score(occ_map, scan, p)) for p in poses), key=lambda r: -r[1])
+    best_pose, best = checked[0]
+    second = max((s for p, s in checked[1:] if not similar(p, best_pose)), default=0.0)
     return best_pose, best, second
+
+
+def beam_score(occ_map, scan, pose, sigma=0.10, through=0.20):
+    """Deel van de stralen waarvan de gemeten afstand klopt met de eerste muur op de kaart,
+    min het deel dat "door een muur kijkt" (verder meet dan die muur + `through`).
+
+    Iets vóór de muur (meubel, persoon) telt gewoon niet mee; door een muur kijken kan niet
+    op de juiste plek. Dat onderscheidt plekken waar het veld (enkel de eindpunten) geen
+    verschil ziet.
+    """
+    x, y, t = pose
+    ox, oy, oyaw = scan.offset
+    lx = x + math.cos(t) * ox - math.sin(t) * oy
+    ly = y + math.sin(t) * ox + math.cos(t) * oy
+    a = scan.angles + oyaw + t
+    step = occ_map.resolution / 2
+    d = np.arange(step, MAX_RANGE, step, dtype=np.float32)
+    col = ((lx + np.cos(a)[:, None] * d - occ_map.origin[0]) / occ_map.resolution).astype(np.int32)
+    row = ((ly + np.sin(a)[:, None] * d - occ_map.origin[1]) / occ_map.resolution).astype(np.int32)
+    h, w = occ_map.occupied.shape
+    inside = (row >= 0) & (row < h) & (col >= 0) & (col < w)
+    wall = inside & occ_map.occupied[np.clip(row, 0, h - 1), np.clip(col, 0, w - 1)]
+    expected = np.where(wall.any(axis=1), d[wall.argmax(axis=1)], np.inf)
+    match = np.exp(-0.5 * ((scan.ranges - expected) / sigma) ** 2)
+    return float(match.mean() - (scan.ranges > expected + through).mean())
 
 
 def similar(a, b, dist=0.4, angle=math.radians(25)):

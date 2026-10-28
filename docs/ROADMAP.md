@@ -144,8 +144,14 @@ rijden.
       insteken hielp. Komt het terug: automatische USB-reset of schakelbare USB-poort
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
 - [x] Laatst bekende positie onthouden (`pose_saver` -> `<kaart>.lastpose`); de navigatie start daar
-- [ ] Globaal lokaliseren ("zoek jezelf") als de robot verplaatst werd: knop in het dashboard
-      (bv. tijdelijk AMCL met global localization + rondje draaien)
+- [x] Globaal lokaliseren: knop "Zoek mezelf op de kaart" in het dashboard (28-10-2026,
+      `relocalize.py` in map_manager). Eén lidarscan tegen de .pgm: grof zoeken op alle vrije
+      plekken, fijn bijstellen, daarna per straal controleren of hij niet "door een muur kijkt".
+      Op living_v3: zekerheid 0,56-0,63 tegen hoogstens 0,33 voor de beste andere plek; ~1 s CPU
+- [x] Gyroscoop-nulpunt (28-10-2026): het ESP32-board gaf bij stilstand x +17, y -9, z -8 °/s,
+      waardoor de robot op de kaart ronddraaide (4°/s) en slam_toolbox elke startpositie
+      kwijtraakte. esp32_bridge meet het nulpunt nu zelf bij stilstand en trekt het af
+- [x] Obstakels live op de kaart in het dashboard: oranje = lidar, rood = camera (vloerobstakels)
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
@@ -153,7 +159,8 @@ rijden.
 ### Navigatie- en rijprestaties verbeteren (zodra de UPS-batterij terug werkt)
 - [ ] Route strakker volgen en vloeiender bochten in auto-modus (RPP verder afstellen of
       opnieuw MPPI proberen nu de draaisnelheid gekalibreerd is)
-- [ ] Lokalisatie tijdens het draaien (scans die even naast de muren liggen)
+- [ ] Lokalisatie tijdens het draaien (scans die even naast de muren liggen); mogelijk
+      (deels) door het gyronulpunt, dat op 28-10-2026 is opgelost: opnieuw testen
 - [ ] Testrondes met meerdere doelen, slaagpercentage bijhouden (demo: 6 van 11 aangekomen)
 
 ### Optimalisaties (CPU/RAM sparen voor de AI)
@@ -178,7 +185,7 @@ rijden.
       gebouwd (±6 min, daarna enkele seconden). Gemeten 28-10-2026 aan 10 Hz: 19% van één
       kern, ~680 MB RAM (waarvan ~320 MB gedeelde CUDA/TensorRT-bibliotheken), GPU 4 ms per
       beeld op volle klok (12 ms bij 10 Hz: de GPU klokt tussen de beelden terug)
-- [ ] Detecties in het dashboard (kaders over het camerabeeld)
+- [x] Detecties in het dashboard (kaders over het camerabeeld)
 - [ ] JPEG decoderen in hardware of ruwe beelden via de VIC van de host (nu 9 ms CPU per beeld)
 - [ ] Objecten op de kaart aanduiden (richting uit het beeld + lidar-afstand)
 - [ ] Open woordenschat (bv. YOLOE / YOLO-World): zoeken naar willekeurige woorden i.p.v.

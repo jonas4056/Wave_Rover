@@ -5,10 +5,15 @@
 - Komt er langer dan `cmd_timeout` geen /cmd_vel binnen, dan worden de motoren gestopt.
 - De IMU (`T:126` → antwoord `T:1002`) en de chassisfeedback (`T:130` → `T:1001`)
   worden periodiek opgevraagd en gepubliceerd als /imu/data_raw en /battery.
+- Het nulpunt van de gyroscoop wordt bijgehouden terwijl de motoren stilstaan en afgetrokken:
+  het board zelf geeft bij stilstand tot 17 °/s (28-10-2026: x +17, y -9, z -8, stabiel),
+  en de EKF liet de robot daardoor op de kaart ronddraaien. /imu/data_raw komt pas zodra
+  er een nulpunt is (~2 s stilstand na het starten).
 """
 import json
 import math
 import threading
+import time
 
 import rclpy
 import serial
@@ -18,6 +23,7 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, Imu
 
 G = 9.80665
+GYRO_BIAS_START = 40  # metingen bij stilstand voor het eerste nulpunt (2 s bij 20 Hz)
 
 
 def quaternion_from_rpy(roll, pitch, yaw):
@@ -62,6 +68,8 @@ class Esp32Bridge(Node):
         self.declare_parameter('cmd_timeout', 0.5)
         self.declare_parameter('imu_rate', 20.0)
         self.declare_parameter('imu_frame', 'imu_link')
+        # Tijdconstante (s) van het lopende gemiddelde voor het gyronulpunt.
+        self.declare_parameter('gyro_bias_time', 10.0)
 
         self.track_width = self.get_parameter('track_width').value
         self.speed_at_max_cmd = self.get_parameter('speed_at_max_cmd').value
@@ -73,6 +81,11 @@ class Esp32Bridge(Node):
         self.curve_gain = self.get_parameter('curve_gain').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
         self.imu_frame = self.get_parameter('imu_frame').value
+        self.gyro_bias_alpha = 1.0 / (self.get_parameter('imu_rate').value
+                                      * self.get_parameter('gyro_bias_time').value)
+        self.gyro_bias = [0.0, 0.0, 0.0]  # °/s
+        self.gyro_samples = 0
+        self.last_motion = time.monotonic()  # motoren draaiden; de eerste seconde niet meten
 
         port = self.get_parameter('port').value
         baud = self.get_parameter('baud').value
@@ -114,6 +127,8 @@ class Esp32Bridge(Node):
 
         left, right = self.to_wheel_cmds(left, right)
         self.send({'T': 1, 'L': round(left, 3), 'R': round(right, 3)})
+        if left or right:
+            self.last_motion = time.monotonic()
         self.last_cmd_time = self.get_clock().now()
 
     def angular_gain(self, forward, turn):
@@ -176,7 +191,30 @@ class Esp32Bridge(Node):
             elif data.get('T') == 1001:
                 self.publish_battery(data)
 
+    def update_gyro_bias(self, gyro):
+        """Gyronulpunt bijwerken met een meting (°/s), alleen als de motoren stilstaan."""
+        if time.monotonic() - self.last_motion < 1.0:
+            return
+        if self.gyro_samples < GYRO_BIAS_START:
+            # Eerst een gewoon gemiddelde, daarna een lopend gemiddelde (volgt temperatuur).
+            n = self.gyro_samples
+            self.gyro_bias = [(b * n + g) / (n + 1) for b, g in zip(self.gyro_bias, gyro)]
+            self.gyro_samples += 1
+            if self.gyro_samples == GYRO_BIAS_START:
+                x, y, z = self.gyro_bias
+                self.get_logger().info(f'Gyronulpunt: x {x:.1f}, y {y:.1f}, z {z:.1f} °/s')
+        elif all(abs(g - b) < 25.0 for g, b in zip(gyro, self.gyro_bias)):
+            # Grote uitschieters: iemand tilt of duwt de robot; niet meetellen.
+            a = self.gyro_bias_alpha
+            self.gyro_bias = [b + a * (g - b) for b, g in zip(self.gyro_bias, gyro)]
+
     def publish_imu(self, d):
+        gyro = (d['gx'], d['gy'], d['gz'])
+        self.update_gyro_bias(gyro)
+        if self.gyro_samples < GYRO_BIAS_START:
+            return  # zonder nulpunt liever geen IMU dan een draaiende robot
+        gx, gy, gz = (g - b for g, b in zip(gyro, self.gyro_bias))
+
         msg = Imu()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = self.imu_frame
@@ -187,10 +225,10 @@ class Esp32Bridge(Node):
         # Yaw komt van de magnetometer en is binnenshuis onbetrouwbaar: grote onzekerheid.
         msg.orientation_covariance = [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 1.0]
 
-        # Gyroscoop in °/s, versnelling in mg.
-        msg.angular_velocity.x = math.radians(d['gx'])
-        msg.angular_velocity.y = math.radians(d['gy'])
-        msg.angular_velocity.z = math.radians(d['gz'])
+        # Gyroscoop in °/s (min het nulpunt), versnelling in mg.
+        msg.angular_velocity.x = math.radians(gx)
+        msg.angular_velocity.y = math.radians(gy)
+        msg.angular_velocity.z = math.radians(gz)
         # Gemeten ruis bij stilstand: ±3 °/s met pieken tot 16 °/s -> std ~0.1 rad/s.
         msg.angular_velocity_covariance = [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
         msg.linear_acceleration.x = d['ax'] / 1000.0 * G

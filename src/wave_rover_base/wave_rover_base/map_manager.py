@@ -35,9 +35,10 @@ from tf2_ros import Buffer, TransformListener
 from wave_rover_base import relocalize
 
 VALID_NAME = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
-# Zelf lokaliseren: zo goed moet de scan passen, en zoveel beter dan de beste andere plek.
-FIND_MIN_SCORE = 0.40
-FIND_MIN_MARGIN = 0.06
+# Zelf lokaliseren: zo goed moet de scan passen, en zoveel beter dan de beste andere plek
+# (score per straal, zie relocalize.beam_score; living_v3: 0,62 tegen 0,33).
+FIND_MIN_SCORE = 0.35
+FIND_MIN_MARGIN = 0.12
 
 
 class MapManager(Node):
@@ -213,10 +214,9 @@ class MapManager(Node):
                 if self.laser_offset is None:
                     raise RuntimeError('positie van de lidar op de robot onbekend (TF)')
             started = time.monotonic()
-            points = relocalize.scan_points(scan.ranges, scan.angle_min, scan.angle_increment,
-                                            scan.range_min, scan.range_max, self.laser_offset,
-                                            180)
-            pose, best, second = relocalize.localize(relocalize.OccupancyMap(yaml_path), points)
+            beams = relocalize.Scan(scan.ranges, scan.angle_min, scan.angle_increment,
+                                    scan.range_min, scan.range_max, self.laser_offset)
+            pose, best, second = relocalize.localize(relocalize.OccupancyMap(yaml_path), beams)
             took = time.monotonic() - started
             self.get_logger().info(
                 f'Zelf lokaliseren op {name}: {pose} score {best:.2f} (tweede {second:.2f}, '
