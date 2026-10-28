@@ -152,6 +152,8 @@ rijden.
       waardoor de robot op de kaart ronddraaide (4°/s) en slam_toolbox elke startpositie
       kwijtraakte. esp32_bridge meet het nulpunt nu zelf bij stilstand en trekt het af
 - [x] Obstakels live op de kaart in het dashboard: oranje = lidar, rood = camera (vloerobstakels)
+- [x] Wifi-hotspot `WaveRover` als er geen bekend wifinetwerk is (bv. bij de ouders), zie
+      Systeeminstellingen. Getest 28-10-2026 met de pc; nog te testen met de iPhone
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
@@ -271,6 +273,14 @@ NVIDIA-GPU.
   Getest op 23-10-2026: zelfde IP (192.168.1.28) op beide netwerken.
 - Wifi-regiocode België: `/etc/modprobe.d/cfg80211-regdom.conf` (`ieee80211_regdom=BE`).
 - Het ESP32-bord van de Wave Rover maakt zelf een wifi-hotspot `UGV`.
+- **Hotspot als er geen bekend wifinetwerk is** (28-10-2026, `scripts/install_wifi_fallback.sh`,
+  dienst `wave-rover-wifi`): na 60 s zonder wifi maakt de Jetson het netwerk `WaveRover`
+  (2,4 GHz, WPA2, Jetson = 10.42.0.1). De app werkt dan gewoon op http://jetson.local:8080.
+  Zit er 5 min niemand op de hotspot, dan zoekt hij opnieuw een bekend netwerk. Wachtwoord
+  opvragen: `sudo nmcli -s -g 802-11-wireless-security.psk connection show WaveRover-hotspot`.
+- **Interface `ros0` (10.99.99.1)**, dienst `wave-rover-ros0` vóór Docker: ROS-nodes geven bij
+  het starten hun adressen door; zonder vast adres vonden nodes die na het omschakelen naar
+  de hotspot starten de andere niet meer. Thuis verandert er niets (pc ziet de topics).
 - Hardware-watchdog (`RuntimeWatchdogSec=30s`), herstart na kernelpanic (`kernel.panic=10`,
   `kernel.hung_task_panic=1`), NVMe Host Memory Buffer uit (`nvme.max_host_mem_size_mb=0`).
 - `jonas` zit in de groepen `docker` en `dialout`, en heeft sudo zonder wachtwoord.
