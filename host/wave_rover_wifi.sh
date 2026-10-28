@@ -36,7 +36,8 @@ clients() {
 }
 
 lost=$(date +%s)  # laatste keer verbonden (wifi of hotspot)
-idle=$lost        # laatste keer een toestel op de hotspot
+idle=$lost        # laatste keer een toestel op de hotspot (of de hotspot net aan)
+prev=             # toestand bij de vorige controle
 while true; do
     now=$(date +%s)
     conn=$(connected)
@@ -46,7 +47,8 @@ while true; do
         lost=$now
     fi
     if [ "$conn" = hotspot ]; then
-        if [ "$(clients)" -gt 0 ]; then
+        if [ "$prev" != hotspot ] || [ "$(clients)" -gt 0 ]; then
+            # Net aangegaan (ook met de hand) of iemand verbonden: RETRY telt vanaf nu.
             idle=$now
         elif [ $((now - idle)) -ge $RETRY ]; then
             echo "Al $RETRY s niemand op de hotspot: bekend wifinetwerk zoeken"
@@ -60,5 +62,6 @@ while true; do
             lost=$now  # mislukt: na WAIT s opnieuw proberen
         fi
     fi
+    prev=$conn
     sleep $CHECK
 done

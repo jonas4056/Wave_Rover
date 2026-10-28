@@ -153,7 +153,7 @@ rijden.
       kwijtraakte. esp32_bridge meet het nulpunt nu zelf bij stilstand en trekt het af
 - [x] Obstakels live op de kaart in het dashboard: oranje = lidar, rood = camera (vloerobstakels)
 - [x] Wifi-hotspot `WaveRover` als er geen bekend wifinetwerk is (bv. bij de ouders), zie
-      Systeeminstellingen. Getest 28-10-2026 met de pc; nog te testen met de iPhone
+      Systeeminstellingen. Getest 28-10-2026 met de iPhone: app, navigatie en "Zoek mezelf" werken
 - [ ] Snel een nieuwe ruimte in kaart brengen en daarna navigeren (workflow + dashboardknop)
 - [ ] Zelf verkennen (exploration) zodat de robot zelf een kaart maakt
 - [ ] Locaties met een naam, gekoppeld aan "go to the point A..D"
