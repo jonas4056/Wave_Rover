@@ -22,6 +22,8 @@ def generate_launch_description():
             executable='rf2o_laser_odometry_node',
             name='rf2o_laser_odometry',
             parameters=[config],
+            # rf2o logt anders twee INFO-regels per scan (10 Hz): onnodig CPU en schrijfwerk.
+            ros_arguments=['--log-level', 'warn'],
             output='screen',
         ),
         Node(
