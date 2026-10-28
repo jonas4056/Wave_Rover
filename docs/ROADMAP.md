@@ -158,7 +158,8 @@ rijden.
 
 ### Optimalisaties (CPU/RAM sparen voor de AI)
 - [x] Nav2 met `use_composition` (één proces i.p.v. ±12)
-- [x] RC: gemeten ~38 Hz (geen 150); begrenzen heeft geen zin en werd weer uitgezet
+- [x] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (150 Hz). Daarbij gevonden: de UART werd
+      per 256 bytes gelezen, waardoor pakketten per ~7 en tot 50 ms te laat kwamen; nu direct
 - [ ] Zware Python-nodes (esp32_bridge, lidar_odom_fix) eventueel naar C++
 - [x] Gemeten (28-10-2026, navigatie aan, stilstaand): CPU 1,78 -> 1,11 kernen, geheugen ROS 2049 -> 1584 MB,
       47 -> 36 processen

@@ -23,12 +23,24 @@ CRSF_MID = 992
 CRSF_HALF_RANGE = 820
 
 
-def crc8_dvb_s2(data):
-    crc = 0
-    for byte in data:
-        crc ^= byte
+def _crc8_table():
+    table = []
+    for i in range(256):
+        crc = i
         for _ in range(8):
             crc = ((crc << 1) ^ 0xD5) & 0xFF if crc & 0x80 else (crc << 1) & 0xFF
+        table.append(crc)
+    return bytes(table)
+
+
+CRC8_TABLE = _crc8_table()
+
+
+def crc8_dvb_s2(data):
+    # Met tabel: 150 pakketten/s bit per bit narekenen kostte merkbaar CPU.
+    crc = 0
+    for byte in data:
+        crc = CRC8_TABLE[crc ^ byte]
     return crc
 
 
@@ -46,11 +58,12 @@ class CrsfJoy(Node):
         self.declare_parameter('port', '/dev/ttyTHS1')
         self.declare_parameter('baud', 420000)
         self.declare_parameter('link_timeout', 0.3)
-        # Optionele begrenzing (0 = uit). De Crossfire-ontvanger levert ~38 pakketten/s, vaak
-        # per twee tegelijk gelezen; begrenzen op 50 Hz liet er maar ~19/s over. Dus standaard uit.
-        self.declare_parameter('publish_rate', 0.0)
+        # De ontvanger stuurt 150 pakketten/s; 50 Hz is ruim genoeg om te rijden en spaart CPU
+        # in crsf_joy, rc_teleop, e_stop en twist_mux. 0 = elk pakket doorsturen.
+        self.declare_parameter('publish_rate', 50.0)
         rate = self.get_parameter('publish_rate').value
-        self.min_period = 1.0 / rate if rate > 0 else 0.0
+        # 25% marge: pakketten komen elke 6,7 ms; zonder marge viel het ritme terug naar ~37 Hz.
+        self.min_period = 0.75 / rate if rate > 0 else 0.0
         self.last_publish = 0.0
 
         self.link_timeout = self.get_parameter('link_timeout').value
@@ -80,7 +93,9 @@ class CrsfJoy(Node):
         buf = bytearray()
         while rclpy.ok():
             try:
-                buf += self.ser.read(256)
+                # Lezen wat er al binnen is (minstens 1 byte). read(256) wachtte tot de
+                # time-out van 50 ms: dan kwamen de pakketten per ~7 tegelijk en 50 ms te laat.
+                buf += self.ser.read(self.ser.in_waiting or 1)
             except serial.SerialException as e:
                 self.get_logger().error(f'Seriële fout: {e}')
                 return
