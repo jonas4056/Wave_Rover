@@ -124,13 +124,17 @@ function showShutdown(seconds) {
 
 // Alleen beelden ophalen als iemand kijkt: spaart wifi en CPU op de Jetson.
 let cameraTopic = null;
+const CAMERA_HINT = 'Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.';
 
 function setCamera(on) {
   const btn = $('camera-toggle');
   btn.classList.toggle('active', on);
   btn.textContent = on ? 'Verberg beeld' : 'Toon beeld';
-  $('camera-image').hidden = !on;
-  $('camera-hint').hidden = on;
+  const img = $('camera-image');
+  img.hidden = true;  // pas tonen bij het eerste nieuwe beeld, niet het oude van vorige keer
+  img.removeAttribute('src');
+  $('camera-hint').textContent = on ? 'Camera start…' : CAMERA_HINT;
+  $('camera-hint').hidden = false;
   if (cameraTopic) {
     cameraTopic.unsubscribe();
     cameraTopic = null;
@@ -138,14 +142,20 @@ function setCamera(on) {
   if (on && ros && connected) {
     cameraTopic = topic('/camera/image/compressed', 'sensor_msgs/msg/CompressedImage',
       { throttle_rate: 100, queue_length: 1 });
-    cameraTopic.subscribe((m) => { $('camera-image').src = `data:image/jpeg;base64,${m.data}`; });
+    cameraTopic.subscribe((m) => {
+      img.src = `data:image/jpeg;base64,${m.data}`;
+      img.hidden = false;
+      $('camera-hint').hidden = true;
+    });
   }
 }
 
 $('camera-toggle').addEventListener('click', () => {
   const on = cameraTopic === null;
-  // Staat de module camera nog uit, dan zetten we ze aan (uitzetten doe je bij de modules).
-  if (on && lastModules.camera && lastModules.camera.state === 'uit') {
+  // De module camera gaat mee aan (uitzetten doe je bij de modules).
+  // Elke andere toestand dan aan/start (uit, fout of nog onbekend): aanzetten.
+  const state = lastModules.camera && lastModules.camera.state;
+  if (on && state !== 'aan' && state !== 'start') {
     callEnable('camera', true);
   }
   setCamera(on);

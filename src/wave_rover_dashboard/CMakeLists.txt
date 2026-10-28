@@ -3,6 +3,6 @@ project(wave_rover_dashboard)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch web DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch scripts web DESTINATION share/${PROJECT_NAME})
 
 ament_package()

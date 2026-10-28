@@ -8,6 +8,8 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     web = PathJoinSubstitution([FindPackageShare('wave_rover_dashboard'), 'web'])
+    server = PathJoinSubstitution([FindPackageShare('wave_rover_dashboard'), 'scripts',
+                                   'web_server.py'])
 
     return LaunchDescription([
         Node(
@@ -18,7 +20,7 @@ def generate_launch_description():
             output='screen',
         ),
         ExecuteProcess(
-            cmd=['python3', '-m', 'http.server', '8080', '--directory', web],
+            cmd=['python3', server, '8080', web],
             name='dashboard_web',
             output='screen',
         ),
