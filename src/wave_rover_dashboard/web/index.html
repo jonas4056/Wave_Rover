@@ -55,8 +55,12 @@
         <h2>Camera</h2>
         <button type="button" id="camera-toggle" class="small-btn">Toon beeld</button>
       </div>
-      <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
-      <p class="hint" id="camera-hint">Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.</p>
+      <div class="camera-wrap">
+        <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
+        <canvas id="camera-overlay" class="camera-overlay"></canvas>
+      </div>
+      <p class="hint" id="camera-hint">Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.
+        Met de module detection aan verschijnen kaders rond herkende objecten.</p>
     </section>
 
     <section class="card">

@@ -124,7 +124,10 @@ function showShutdown(seconds) {
 
 // Alleen beelden ophalen als iemand kijkt: spaart wifi en CPU op de Jetson.
 let cameraTopic = null;
+let detectionsTopic = null;
+let detectionsClear = null;
 const CAMERA_HINT = 'Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.';
+const CAMERA_SIZE = { w: 1280, h: 720 };  // kaders in /detections zijn in deze pixels
 
 function setCamera(on) {
   const btn = $('camera-toggle');
@@ -138,7 +141,10 @@ function setCamera(on) {
   if (cameraTopic) {
     cameraTopic.unsubscribe();
     cameraTopic = null;
+    detectionsTopic.unsubscribe();
+    detectionsTopic = null;
   }
+  drawDetections([]);
   if (on && ros && connected) {
     cameraTopic = topic('/camera/image/compressed', 'sensor_msgs/msg/CompressedImage',
       { throttle_rate: 100, queue_length: 1 });
@@ -147,6 +153,46 @@ function setCamera(on) {
       img.hidden = false;
       $('camera-hint').hidden = true;
     });
+    // Kaders van de module detection (10 Hz); niets als die uit staat.
+    detectionsTopic = topic('/detections', 'vision_msgs/msg/Detection2DArray',
+      { throttle_rate: 100, queue_length: 1 });
+    detectionsTopic.subscribe((m) => {
+      drawDetections(m.detections);
+      clearTimeout(detectionsClear);  // module gestopt: oude kaders weghalen
+      detectionsClear = setTimeout(() => drawDetections([]), 1000);
+    });
+  }
+}
+
+function drawDetections(detections) {
+  const canvas = $('camera-overlay');
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * ratio;
+  canvas.height = canvas.clientHeight * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if ($('camera-image').hidden) return;
+  const sx = canvas.width / CAMERA_SIZE.w;
+  const sy = canvas.height / CAMERA_SIZE.h;
+  ctx.lineWidth = 2 * ratio;
+  ctx.font = `600 ${12 * ratio}px -apple-system, sans-serif`;
+  ctx.textBaseline = 'bottom';
+  for (const d of detections) {
+    const hyp = d.results[0].hypothesis;
+    const w = d.bbox.size_x * sx;
+    const h = d.bbox.size_y * sy;
+    const x = d.bbox.center.position.x * sx - w / 2;
+    const y = d.bbox.center.position.y * sy - h / 2;
+    const label = `${hyp.class_id} ${Math.round(hyp.score * 100)}%`;
+    ctx.strokeStyle = '#3ccf7a';
+    ctx.strokeRect(x, y, w, h);
+    const tw = ctx.measureText(label).width + 8 * ratio;
+    const th = 16 * ratio;
+    const ty = y > th ? y : y + th;  // label binnen het beeld houden
+    ctx.fillStyle = '#3ccf7a';
+    ctx.fillRect(x - ratio, ty - th, tw, th);
+    ctx.fillStyle = '#10161f';
+    ctx.fillText(label, x + 4 * ratio, ty - 2 * ratio);
   }
 }
 

@@ -382,6 +382,16 @@ button {
 
 .small-btn.active { background: var(--accent); color: #fff; }
 
+.camera-wrap { position: relative; }
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .camera-image {
   display: block;
   width: 100%;
