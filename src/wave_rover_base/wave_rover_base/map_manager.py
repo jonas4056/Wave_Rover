@@ -7,6 +7,10 @@ Topics (gewone berichttypes, zodat rosbridge geen eigen interfaces nodig heeft):
 - /maps/select (std_msgs/String): naam -> wordt de kaart voor de navigatie
   (`<maps_dir>/current`; navigation.launch.py leest dit bij het starten).
 - /maps/list (std_msgs/String, JSON, latched): {"maps": [...], "current": "...", "message": "..."}
+- /localization/find (std_msgs/Empty): zoek waar de robot op de huidige kaart staat (één
+  lidarscan tegen de opgeslagen kaart, zie relocalize.py) en geef dat als startpositie aan de
+  lokalisatie. Resultaat op /localization/status (std_msgs/String, JSON, latched):
+  {"busy": bool, "ok": bool, "message": "..."}.
 
 Doet niets zolang er geen verzoek komt.
 """
@@ -16,15 +20,24 @@ import os
 import re
 import subprocess
 import threading
+import time
 
 import rclpy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
+from rclpy.time import Time
+from sensor_msgs.msg import LaserScan
 from slam_toolbox.srv import SerializePoseGraph
-from std_msgs.msg import String
+from std_msgs.msg import Empty, String
+from tf2_ros import Buffer, TransformListener
+
+from wave_rover_base import relocalize
 
 VALID_NAME = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
+# Zelf lokaliseren: zo goed moet de scan passen, en zoveel beter dan de beste andere plek.
+FIND_MIN_SCORE = 0.40
+FIND_MIN_MARGIN = 0.06
 
 
 class MapManager(Node):
@@ -45,6 +58,13 @@ class MapManager(Node):
         self.robot_pose = None
         self.busy = False
         self.publish_list('')
+
+        self.find_pub = self.create_publisher(String, 'localization/status', latched)
+        self.initial_pub = self.create_publisher(PoseWithCovarianceStamped, 'initialpose', 10)
+        self.create_subscription(Empty, 'localization/find', self.on_find, 10)
+        self.finding = False
+        self.laser_offset = None  # (x, y, yaw) van de lidar op de robot, eenmalig uit TF
+        self.publish_find(False, '')
 
     # --- lijst ----------------------------------------------------------------------
 
@@ -132,6 +152,100 @@ class MapManager(Node):
         finally:
             self.busy = False
         self.publish_list(message)
+
+    # --- zelf lokaliseren -------------------------------------------------------------
+
+    def publish_find(self, ok, message):
+        data = {'busy': self.finding, 'ok': ok, 'message': message}
+        self.find_pub.publish(String(data=json.dumps(data)))
+
+    def on_find(self, _msg):
+        if self.finding:
+            return
+        if self.count_subscribers('initialpose') == 0:
+            self.publish_find(False, 'Zet eerst de module "navigation" aan')
+            return
+        self.finding = True
+        self.publish_find(False, 'Zoeken…')
+        threading.Thread(target=self.find, daemon=True).start()
+
+    def wait_for_scan(self, timeout=3.0):
+        got, done = [], threading.Event()
+
+        def on_scan(msg):
+            got.append(msg)
+            done.set()
+
+        sub = self.create_subscription(LaserScan, 'scan', on_scan, qos_profile_sensor_data)
+        done.wait(timeout)
+        self.destroy_subscription(sub)
+        return got[0] if got else None
+
+    def lookup_laser_offset(self, frame, timeout=3.0):
+        buffer = Buffer()
+        listener = TransformListener(buffer, self)
+        try:
+            end = time.monotonic() + timeout
+            while time.monotonic() < end:
+                try:
+                    t = buffer.lookup_transform('base_footprint', frame, Time()).transform
+                    q = t.rotation
+                    yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+                    return (t.translation.x, t.translation.y, yaw)
+                except Exception:
+                    time.sleep(0.1)
+            return None
+        finally:
+            listener.unregister()
+
+    def find(self):
+        ok, message = False, ''
+        try:
+            name = self.current()
+            yaml_path = os.path.join(self.maps_dir, name + '.yaml')
+            if not name or not os.path.exists(yaml_path):
+                raise RuntimeError('geen kaart gekozen')
+            scan = self.wait_for_scan()
+            if scan is None:
+                raise RuntimeError('geen lidarscan (staat de lidar aan?)')
+            if self.laser_offset is None:
+                self.laser_offset = self.lookup_laser_offset(scan.header.frame_id)
+                if self.laser_offset is None:
+                    raise RuntimeError('positie van de lidar op de robot onbekend (TF)')
+            started = time.monotonic()
+            points = relocalize.scan_points(scan.ranges, scan.angle_min, scan.angle_increment,
+                                            scan.range_min, scan.range_max, self.laser_offset,
+                                            180)
+            pose, best, second = relocalize.localize(relocalize.OccupancyMap(yaml_path), points)
+            took = time.monotonic() - started
+            self.get_logger().info(
+                f'Zelf lokaliseren op {name}: {pose} score {best:.2f} (tweede {second:.2f}, '
+                f'{took:.1f} s)')
+            if pose is None or best < FIND_MIN_SCORE:
+                raise RuntimeError('de scan past nergens goed; staat de robot op deze kaart?')
+            if best - second < FIND_MIN_MARGIN:
+                raise RuntimeError('twee plekken lijken op elkaar; draai de robot een beetje '
+                                   'of zet hem ergens anders en probeer opnieuw')
+            self.send_initial_pose(pose)
+            ok, message = True, f'Gevonden (zekerheid {round(100 * best)}%)'
+        except RuntimeError as e:
+            message = f'Niet gevonden: {e}'
+        finally:
+            self.finding = False
+        self.publish_find(ok, message)
+
+    def send_initial_pose(self, pose):
+        x, y, yaw = pose
+        msg = PoseWithCovarianceStamped()
+        msg.header.frame_id = 'map'
+        msg.header.stamp = Time().to_msg()  # 0 = laatst bekende TF, zie initialpose_relay
+        msg.pose.pose.position.x = x
+        msg.pose.pose.position.y = y
+        msg.pose.pose.orientation.z = math.sin(yaw / 2)
+        msg.pose.pose.orientation.w = math.cos(yaw / 2)
+        msg.pose.covariance[0] = msg.pose.covariance[7] = 0.05 ** 2
+        msg.pose.covariance[35] = math.radians(3) ** 2
+        self.initial_pub.publish(msg)
 
 
 def main(args=None):

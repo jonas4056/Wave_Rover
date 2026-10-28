@@ -281,6 +281,8 @@ button {
 
 .map-tools button.active { background: var(--accent); color: #fff; }
 .map-tools button.danger { background: rgba(242, 92, 92, 0.2); color: var(--bad); }
+.map-tools button.wide { grid-column: 1 / -1; }
+.map-tools button:disabled { opacity: 0.5; }
 
 .map-wrap {
   position: relative;

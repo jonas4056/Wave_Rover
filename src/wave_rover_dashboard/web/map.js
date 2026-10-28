@@ -32,6 +32,8 @@ const MapView = (() => {
   let goalTopic = null;
   let initialTopic = null;
   let cancelService = null;
+  let findTopic = null;
+  let statusTimer = null;
 
   // --- coördinaten ------------------------------------------------------------------
 
@@ -98,6 +100,19 @@ const MapView = (() => {
   function onObstacles(kind, msg) {
     obstacles[kind] = { points: msg.data, time: performance.now() };
     dirty = true;
+  }
+
+  // Tijdelijke melding in de status rechtsboven (bv. resultaat van "Zoek mezelf").
+  function showStatus(text, ms) {
+    statusEl.textContent = text;
+    clearTimeout(statusTimer);
+    if (ms) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, ms);
+  }
+
+  function onFindStatus(msg) {
+    const s = JSON.parse(msg.data);
+    document.getElementById('nav-find').disabled = s.busy;
+    if (s.message) showStatus(s.message, s.busy ? 0 : 8000);
   }
 
   function onNavStatus(msg) {
@@ -315,6 +330,10 @@ const MapView = (() => {
     }
   }
 
+  document.getElementById('nav-find').addEventListener('click', () => {
+    if (findTopic) findTopic.publish({});
+  });
+
   ['pointerup', 'pointercancel'].forEach((type) => canvas.addEventListener(type, endPointer));
   window.addEventListener('resize', () => { dirty = true; });
 
@@ -335,6 +354,9 @@ const MapView = (() => {
       .subscribe((m) => onObstacles('floor', m));
     topic('/navigate_to_pose/_action/status', 'action_msgs/msg/GoalStatusArray', { throttle_rate: 500 })
       .subscribe(onNavStatus);
+
+    topic('/localization/status', 'std_msgs/msg/String').subscribe(onFindStatus);
+    findTopic = topic('/localization/find', 'std_msgs/msg/Empty');
 
     goalTopic = topic('/goal_pose', 'geometry_msgs/msg/PoseStamped');
     initialTopic = topic('/initialpose_rviz', 'geometry_msgs/msg/PoseWithCovarianceStamped');
