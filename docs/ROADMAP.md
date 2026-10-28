@@ -121,7 +121,7 @@ muren.
 ### Fase 3 – Autonoom navigeren
 - [x] Nav2 instellen voor een robot zonder encoders (RPP, op de plaats draaien, lokalisatie met slam_toolbox)
 - [x] Navigeren naar een punt dat je in RViz aanklikt
-- [ ] Autonoom verkennen (`explore_lite`): de robot brengt zelf de ruimte in kaart
+- [ ] Autonoom verkennen (`explore_lite`): de robot brengt zelf de ruimte in kaart ("Auto Exploration & Mapping")
 - [ ] Locaties met een naam opslaan ("zetel", "tv", "deur")
 
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
@@ -166,6 +166,13 @@ rijden.
 ### Fase 4 – Camera en beeldherkenning op de GPU
 - [ ] CSI-camera in de container (Argus op JetPack 7 testen)
 - [ ] Objectdetectie met TensorRT (bv. YOLO) → objecten worden op de kaart aangeduid
+- [ ] Camera in ROS als module (`/camera/image/compressed`, hardware-JPEG via GStreamer op de host)
+      en live in het dashboard
+- [ ] Beeldfuncties (zoals de Waveshare UGV Rover): objectherkenning, gezichtsdetectie,
+      gebaren, kleurherkenning, bewegingsdetectie, lijn volgen
+- [ ] Diepte: eerst monoculair (Depth Anything op de GPU); later eventueel een OAK-D (Lite)
+      i.p.v. twee losse IMX219's als stereo (geen hardware-sync, stijve montage nodig)
+- [ ] Kleurzweem (paars beeld): NoIR-module of ontbrekende ISP-kalibratie uitzoeken
 - [ ] **Lage obstakels** (speelgoed, kabels): de lidar scant op 20 cm hoogte en ziet die niet.
       Opties: dieptebeeld uit de camera (bv. Depth Anything op de GPU) als extra laag in de
       costmap, en/of goedkope ToF-/ultrasone sensoren laag vooraan als vangnet
