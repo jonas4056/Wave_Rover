@@ -142,7 +142,14 @@ function setCamera(on) {
   }
 }
 
-$('camera-toggle').addEventListener('click', () => setCamera(cameraTopic === null));
+$('camera-toggle').addEventListener('click', () => {
+  const on = cameraTopic === null;
+  // Staat de module camera nog uit, dan zetten we ze aan (uitzetten doe je bij de modules).
+  if (on && lastModules.camera && lastModules.camera.state === 'uit') {
+    callEnable('camera', true);
+  }
+  setCamera(on);
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && cameraTopic) setCamera(false);
 });
@@ -172,7 +179,10 @@ $('estop-release').addEventListener('click', () => setEstop(false));
 const STATE_LABELS = { uit: 'uit', start: 'start…', aan: 'aan', stopt: 'stopt…', fout: 'fout' };
 const STATE_CLASS = { aan: 'ok', start: 'warn', stopt: 'warn', fout: 'bad' };
 
+let lastModules = {};
+
 function showModules(modules) {
+  lastModules = modules;
   const list = $('modules');
   list.replaceChildren();
   for (const [name, info] of Object.entries(modules)) {
@@ -209,6 +219,10 @@ function showModules(modules) {
 function enableModule(name, enable, toggle) {
   toggle.classList.add('busy');
   toggle.disabled = true;
+  callEnable(name, enable);
+}
+
+function callEnable(name, enable) {
   const service = new ROSLIB.Service({
     ros, name: `/modules/${name}/enable`, serviceType: 'std_srvs/srv/SetBool',
   });
