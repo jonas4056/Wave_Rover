@@ -35,6 +35,19 @@ function scheduleReconnect() {
   }
 }
 
+// Staat er een nieuwere versie van het dashboard op de Jetson (na een update)? Dan
+// herladen: een webapp op het beginscherm blijft anders de oude scripts gebruiken.
+function reloadIfUpdated() {
+  const meta = document.querySelector('meta[name="dashboard-version"]');
+  if (!meta) return;
+  fetch('/version', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.text() : null))
+    .then((version) => {
+      if (version && version.trim() !== meta.content) window.location.reload();
+    })
+    .catch(() => {});
+}
+
 function connect() {
   setConnection('connecting', 'verbinden…');
   ros = new ROSLIB.Ros({ url: ROSBRIDGE_URL });
@@ -42,6 +55,7 @@ function connect() {
   ros.on('connection', () => {
     connected = true;
     setConnection('online', 'verbonden');
+    reloadIfUpdated();
     subscribeAll();
   });
   ros.on('error', () => setConnection('offline', 'niet verbonden'));
