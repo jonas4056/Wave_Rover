@@ -29,6 +29,8 @@ class CameraBridge(Node):
         self.declare_parameter('host', '127.0.0.1')
         self.declare_parameter('port', 5600)
         self.declare_parameter('frame_id', 'camera_link')
+        # 30 fps: vloeiend en beter voor beeldherkenning; 15 fps halveert de CPU van nvargus.
+        self.declare_parameter('fps', 30)
         self.declare_parameter('request_file', '/home/ubuntu/wave_rover/run/camera_on')
         self.address = (self.get_parameter('host').value, self.get_parameter('port').value)
         self.frame_id = self.get_parameter('frame_id').value
@@ -38,7 +40,7 @@ class CameraBridge(Node):
                                          qos_profile_sensor_data)
         os.makedirs(os.path.dirname(self.request_file), exist_ok=True)
         with open(self.request_file, 'w') as f:
-            f.write('camera aan\n')
+            f.write(f"fps={self.get_parameter('fps').value}\n")
         threading.Thread(target=self.receive_loop, daemon=True).start()
 
     def receive_loop(self):

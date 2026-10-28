@@ -31,7 +31,7 @@ modules:
     requires: [odometry]
     conflicts: [slam]
   camera:
-    description: CSI-camera -> /camera/image/compressed (hardware-JPEG, 15 fps)
+    description: CSI-camera -> /camera/image/compressed (hardware-JPEG, 30 fps)
     package: wave_rover_bringup
     launch: camera.launch.py
     # Camera op de host altijd uitzetten, ook na een crash van camera_bridge.

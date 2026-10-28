@@ -137,7 +137,7 @@ function setCamera(on) {
   }
   if (on && ros && connected) {
     cameraTopic = topic('/camera/image/compressed', 'sensor_msgs/msg/CompressedImage',
-      { throttle_rate: 200, queue_length: 1 });
+      { throttle_rate: 100, queue_length: 1 });
     cameraTopic.subscribe((m) => { $('camera-image').src = `data:image/jpeg;base64,${m.data}`; });
   }
 }
