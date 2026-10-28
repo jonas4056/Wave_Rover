@@ -25,7 +25,9 @@ class PowerGuard(Node):
 
     def __init__(self):
         super().__init__('power_guard')
-        self.declare_parameter('shutdown_percentage', 10.0)
+        # 20% i.p.v. 10%: de UPS meet alleen het hele pakket en balanceert de cellen niet.
+        # Op 28-10-2026 bleek na een afsluiting op 10% één cel op 2,66 V te staan (andere 4,2 V).
+        self.declare_parameter('shutdown_percentage', 20.0)
         self.declare_parameter('confirm_time', 30.0)
         self.declare_parameter('countdown', 60)
         self.declare_parameter('request_file', '/home/ubuntu/wave_rover/run/shutdown_request')

@@ -191,8 +191,12 @@ krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft e
 NVIDIA-GPU.
 
 ### Systeeminstellingen op de Jetson (buiten de repo)
+- **Batterijcellen UPS:** de UPS laadt de 3 cellen in serie zonder balancing. Op 28-10-2026
+  stond na een afsluiting één cel op 2,66 V (andere 4,2 V); de UPS-beveiliging koppelde de
+  batterij los (geen stroom zonder adapter, lader meet 13,3 V/0 A). Af en toe de cellen in een
+  losse lader balanceren; zwakke cel vervangen als ze na een dag rust duidelijk lager staat.
 - Afsluiten bij lege batterij: `power_guard` (container) maakt `~/wave_rover/run/shutdown_request`
-  aan als de UPS 30 s onder 10% zit en de aftelling van 60 s afloopt; `wave-rover-shutdown.path`
+  aan als de UPS 30 s onder 20% zit (waarschuwing vanaf 30%) en de aftelling van 60 s afloopt; `wave-rover-shutdown.path`
   ziet dat en voert `systemctl poweroff` uit. Installeren: `scripts/install_power_guard.sh`.
   Na een automatische afsluiting de UPS-schakelaar uitzetten (de UPS levert nog een kleine stroom).
 - Docker start pas na kloksynchronisatie (`docker.service.d/10-wait-time-sync.conf`, max 90 s via

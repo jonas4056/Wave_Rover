@@ -48,7 +48,7 @@ class BatteryMonitor(Node):
         super().__init__('battery_monitor')
         self.declare_parameter('i2c_bus', 7)
         self.declare_parameter('i2c_address', 0x41)
-        self.declare_parameter('warn_percentage', 20.0)
+        self.declare_parameter('warn_percentage', 30.0)
         self.warn_pct = self.get_parameter('warn_percentage').value
 
         self.ina = Ina219(self.get_parameter('i2c_bus').value,
