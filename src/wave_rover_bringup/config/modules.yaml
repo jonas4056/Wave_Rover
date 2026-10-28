@@ -30,6 +30,13 @@ modules:
     # Kaart: maps/current (kiezen in het dashboard), zie navigation.launch.py.
     requires: [odometry]
     conflicts: [slam]
+  camera:
+    description: CSI-camera -> /camera/image/compressed (hardware-JPEG, 15 fps)
+    package: wave_rover_bringup
+    launch: camera.launch.py
+    # Camera op de host altijd uitzetten, ook na een crash van camera_bridge.
+    on_stop: [rm, -f, /home/ubuntu/wave_rover/run/camera_on]
+    health: {topic: /camera/image/compressed, type: sensor_msgs/msg/CompressedImage, timeout: 5.0}
   voice:
     description: Yahboom-spraakmodule (commando's, batterijmeldingen, noodstop)
     package: wave_rover_bringup

@@ -370,3 +370,23 @@ button {
   from { filter: brightness(1); }
   to { filter: brightness(1.25); }
 }
+
+/* Camera */
+.small-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--card-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.small-btn.active { background: var(--accent); color: #fff; }
+
+.camera-image {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  background: #121821;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+}

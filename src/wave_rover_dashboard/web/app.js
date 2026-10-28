@@ -74,6 +74,7 @@ function subscribeAll() {
 
   cmdVel = topic('/cmd_vel_dashboard', 'geometry_msgs/msg/TwistStamped');
   estopService = new ROSLIB.Service({ ros, name: '/e_stop/set', serviceType: 'std_srvs/srv/SetBool' });
+  if (cameraTopic) setCamera(true);  // na herverbinding opnieuw abonneren
   MapView.start(ros);
   MapsCard.start(ros);
 }
@@ -118,6 +119,33 @@ function showShutdown(seconds) {
   $('shutdown-seconds').textContent = seconds;
   if (seconds >= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// --- camera -------------------------------------------------------------------------
+
+// Alleen beelden ophalen als iemand kijkt: spaart wifi en CPU op de Jetson.
+let cameraTopic = null;
+
+function setCamera(on) {
+  const btn = $('camera-toggle');
+  btn.classList.toggle('active', on);
+  btn.textContent = on ? 'Verberg beeld' : 'Toon beeld';
+  $('camera-image').hidden = !on;
+  $('camera-hint').hidden = on;
+  if (cameraTopic) {
+    cameraTopic.unsubscribe();
+    cameraTopic = null;
+  }
+  if (on && ros && connected) {
+    cameraTopic = topic('/camera/image/compressed', 'sensor_msgs/msg/CompressedImage',
+      { throttle_rate: 200, queue_length: 1 });
+    cameraTopic.subscribe((m) => { $('camera-image').src = `data:image/jpeg;base64,${m.data}`; });
+  }
+}
+
+$('camera-toggle').addEventListener('click', () => setCamera(cameraTopic === null));
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && cameraTopic) setCamera(false);
+});
 
 // --- noodstop -----------------------------------------------------------------------
 
