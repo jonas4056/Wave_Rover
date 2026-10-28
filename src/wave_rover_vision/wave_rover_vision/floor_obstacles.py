@@ -9,18 +9,28 @@ Werkwijze per beeld (`rate` keer per seconde):
 3. Pixels die duidelijk dichterbij zijn dan de vloer daar zou zijn = obstakel. Per kolom
    telt het laagste obstakelpixel: daar raakt het obstakel de vloer, en dat punt ligt vast.
 4. Publiceert /floor_scan (sensor_msgs/LaserScan in camera_link): een virtuele lidar op
-   vloerhoogte. Nav2 zet die in een eigen costmap-laag (floor_layer in nav2.yaml).
+   vloerhoogte. Nav2 gebruikt die enkel om vrije vloer te wissen (floor_layer in nav2.yaml).
+5. Geheugen: elk obstakelpunt wordt onthouden in odom (positie van de robot uit
+   /odometry/filtered) en elk beeld als /floor_points (PointCloud2) gepubliceerd; daarmee
+   markeert Nav2. Zo blijft een obstakel staan als de camera het niet meer ziet (blinde zone
+   vlak voor de robot, of de robot draait weg), en ook nadat Nav2 bij een herstelpoging zijn
+   costmap leegmaakt. Vergeten wordt een punt pas als de camera er vrije vloer ziet, of na
+   `memory_time` seconden.
 """
 import io
 import math
 import time
+from collections import deque
 
 import numpy as np
 import rclpy
 from PIL import Image
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import CompressedImage, LaserScan
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import CompressedImage, LaserScan, PointCloud2
+from sensor_msgs_py import point_cloud2
+from tf2_ros import Buffer, TransformListener
 
 from wave_rover_vision.trt_model import TrtModel, build_engine
 
@@ -46,11 +56,28 @@ class FloorObstacles(Node):
         # Zoveel pixels moet een obstakel minstens hoog zijn (tegen ruis).
         self.declare_parameter('min_height_px', 3)
         self.declare_parameter('columns_per_beam', 4)
+        self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('base_frame', 'base_footprint')
+        self.declare_parameter('memory_time', 60.0)
+        # Dichterbij ziet de camera de vloer niet (blinde zone): daar niets vergeten.
+        self.declare_parameter('blind_range', 0.35)
+        self.declare_parameter('memory_cell', 0.025)
+        self.declare_parameter('memory_max_points', 4000)
         p = lambda name: self.get_parameter(name).value  # noqa: E731
         self.frame_id = p('frame_id')
         self.max_range = p('max_range')
         self.threshold = p('threshold')
         self.min_height_px = p('min_height_px')
+        self.odom_frame = p('odom_frame')
+        self.base_frame = p('base_frame')
+        self.memory_time = p('memory_time')
+        self.blind_range = p('blind_range')
+        self.memory_cell = p('memory_cell')
+        self.memory_max_points = p('memory_max_points')
+        self.memory_xy = np.zeros((0, 2), np.float32)
+        self.memory_t = np.zeros(0, np.float64)
+        self.odom = deque(maxlen=300)  # (tijd, x, y, yaw) van base_frame in odom
+        self.camera_offset = None      # (x, y, yaw) van frame_id in base_frame, uit TF
 
         engine = build_engine(p('model'), self.get_logger().info)
         self.model = TrtModel(engine)
@@ -65,8 +92,14 @@ class FloorObstacles(Node):
         self.latest = None
         self.create_subscription(CompressedImage, 'camera/image_low/compressed', self.on_image,
                                  qos_profile_sensor_data)
+        self.create_subscription(Odometry, 'odometry/filtered', self.on_odom, 20)
         self.pub = self.create_publisher(LaserScan, 'floor_scan', 10)
+        self.points_pub = self.create_publisher(PointCloud2, 'floor_points', 10)
         self.create_timer(1.0 / p('rate'), self.process)
+        # De plaats van de camera op de robot verandert niet: één keer uit TF halen.
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.tf_timer = self.create_timer(0.5, self.lookup_camera_offset)
 
         self.stats_start = time.monotonic()
         self.stats_frames = 0
@@ -105,6 +138,68 @@ class FloorObstacles(Node):
 
     def on_image(self, msg):
         self.latest = msg  # alleen het nieuwste beeld bewaren
+
+    def lookup_camera_offset(self):
+        try:
+            t = self.tf_buffer.lookup_transform(self.base_frame, self.frame_id,
+                                                rclpy.time.Time()).transform
+        except Exception:
+            return  # robot_state_publisher nog niet gezien
+        q = t.rotation
+        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        self.camera_offset = (t.translation.x, t.translation.y, yaw)
+        self.tf_timer.cancel()
+        self.tf_listener.unregister()  # /tf blijven ontvangen kost CPU voor niets
+        self.tf_listener = None
+
+    def on_odom(self, msg):
+        p, q = msg.pose.pose.position, msg.pose.pose.orientation
+        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self.odom.append((stamp, p.x, p.y, yaw))
+
+    def camera_pose(self, stamp):
+        """Positie (x, y, yaw) van de camera in odom op het moment van het beeld."""
+        if self.camera_offset is None or not self.odom:
+            return None
+        t = stamp.sec + stamp.nanosec * 1e-9
+        _, x, y, yaw = min(self.odom, key=lambda o: abs(o[0] - t))
+        if min(abs(o[0] - t) for o in self.odom) > 0.3:
+            return None
+        cx, cy, cyaw = self.camera_offset
+        return (x + cx * math.cos(yaw) - cy * math.sin(yaw),
+                y + cx * math.sin(yaw) + cy * math.cos(yaw), yaw + cyaw)
+
+    def update_memory(self, pose, ranges, new_xy, now):
+        """Vrij geziene punten en oude punten vergeten, nieuwe toevoegen (alles in odom)."""
+        px, py, yaw = pose
+        xy, t = self.memory_xy, self.memory_t
+        keep = now - t < self.memory_time
+        if len(xy) and ranges is not None:
+            dx, dy = xy[:, 0] - px, xy[:, 1] - py
+            r = np.hypot(dx, dy)
+            a = np.arctan2(dy, dx) - yaw
+            a = (a + np.pi) % (2 * np.pi) - np.pi
+            beam = np.round((a - self.angle_min) / self.angle_increment).astype(int)
+            seen = ((beam >= 0) & (beam < self.beams) & (r >= self.blind_range)
+                    & (r <= self.max_range))
+            free = np.zeros(len(xy), bool)
+            free[seen] = ranges[beam[seen]] > r[seen] + 0.10
+            keep &= ~free
+        xy = np.concatenate([xy[keep], new_xy]).astype(np.float32)
+        t = np.concatenate([t[keep], np.full(len(new_xy), now)])
+        # Eén punt per cel (het nieuwste), en niet onbeperkt groeien.
+        cells = np.floor(xy / self.memory_cell).astype(np.int64)
+        _, last = np.unique(cells[::-1], axis=0, return_index=True)
+        idx = np.sort(len(xy) - 1 - last)[-self.memory_max_points:]
+        self.memory_xy, self.memory_t = xy[idx], t[idx]
+
+    def publish_memory(self, stamp):
+        points = [(float(x), float(y), 0.05) for x, y in self.memory_xy]
+        header = LaserScan().header
+        header.stamp = stamp
+        header.frame_id = self.odom_frame
+        self.points_pub.publish(point_cloud2.create_cloud_xyz32(header, points))
 
     def prepare(self, jpeg):
         img = Image.open(io.BytesIO(jpeg))
@@ -147,9 +242,14 @@ class FloorObstacles(Node):
         t2 = time.monotonic()
         depth = self.output.reshape(self.output.shape[-2:])
 
+        pose = self.camera_pose(msg.header.stamp)
+        now = time.monotonic()
         pred = self.fit_floor(depth)
         if pred is None:
             self.stats_skipped += 1
+            if pose is not None:  # niets nieuws gezien, wel het geheugen blijven sturen
+                self.update_memory(pose, None, np.zeros((0, 2), np.float32), now)
+                self.publish_memory(msg.header.stamp)
             self.log_stats((t1 - t0, t2 - t1, time.monotonic() - t2))
             return
         obstacle = self.valid & (depth - pred > self.threshold * pred)
@@ -181,6 +281,14 @@ class FloorObstacles(Node):
         # inf = vrije vloer tot max_range (Nav2: inf_is_valid wist dan de cellen).
         scan.ranges = ranges.tolist()
         self.pub.publish(scan)
+
+        if pose is not None:
+            px, py, yaw = pose
+            gr = self.ground_range[rows, cols]
+            ga = self.ground_angle[rows, cols] + yaw
+            new_xy = np.stack([px + gr * np.cos(ga), py + gr * np.sin(ga)], axis=1)
+            self.update_memory(pose, ranges, new_xy, now)
+            self.publish_memory(msg.header.stamp)
         self.log_stats((t1 - t0, t2 - t1, time.monotonic() - t2))
 
     def log_stats(self, parts):

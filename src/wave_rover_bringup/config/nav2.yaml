@@ -147,16 +147,24 @@ local_costmap:
         # (blinde zone): daar niets wissen, anders verdwijnt een obstakel als je ernaartoe rijdt.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
-        observation_sources: floor_scan
+        # floor_scan wist vrije vloer; floor_points (het geheugen van floor_obstacles, in
+        # odom) markeert. Zo komt een obstakel 0,2 s na het leegmaken van de costmap terug.
+        observation_sources: floor_scan floor_points
+        floor_points:
+          topic: /floor_points
+          data_type: PointCloud2
+          clearing: false
+          marking: true
+          max_obstacle_height: 2.0
+          obstacle_max_range: 100.0  # punten in odom: afstand tot de oorsprong van odom
+          obstacle_min_range: 0.0
         floor_scan:
           topic: /floor_scan
           data_type: LaserScan
           clearing: true
-          marking: true
+          marking: false
           inf_is_valid: true
           max_obstacle_height: 2.0
-          # Iets onder range_max (1,5): Nav2 maakt van inf een punt op 1,4999 m; dat mag
-          # wel wissen maar geen obstakel worden.
           obstacle_max_range: 1.45
           obstacle_min_range: 0.0
           raytrace_max_range: 1.5
@@ -210,16 +218,24 @@ global_costmap:
         # (blinde zone): daar niets wissen, anders verdwijnt een obstakel als je ernaartoe rijdt.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
-        observation_sources: floor_scan
+        # floor_scan wist vrije vloer; floor_points (het geheugen van floor_obstacles, in
+        # odom) markeert. Zo komt een obstakel 0,2 s na het leegmaken van de costmap terug.
+        observation_sources: floor_scan floor_points
+        floor_points:
+          topic: /floor_points
+          data_type: PointCloud2
+          clearing: false
+          marking: true
+          max_obstacle_height: 2.0
+          obstacle_max_range: 100.0  # punten in odom: afstand tot de oorsprong van odom
+          obstacle_min_range: 0.0
         floor_scan:
           topic: /floor_scan
           data_type: LaserScan
           clearing: true
-          marking: true
+          marking: false
           inf_is_valid: true
           max_obstacle_height: 2.0
-          # Iets onder range_max (1,5): Nav2 maakt van inf een punt op 1,4999 m; dat mag
-          # wel wissen maar geen obstakel worden.
           obstacle_max_range: 1.45
           obstacle_min_range: 0.0
           raytrace_max_range: 1.5
