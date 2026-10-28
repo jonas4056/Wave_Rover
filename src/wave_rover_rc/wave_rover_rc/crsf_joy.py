@@ -46,10 +46,11 @@ class CrsfJoy(Node):
         self.declare_parameter('port', '/dev/ttyTHS1')
         self.declare_parameter('baud', 420000)
         self.declare_parameter('link_timeout', 0.3)
-        # De zender stuurt ~150 pakketten/s; 50 Hz is ruim genoeg om te rijden en spaart CPU
-        # in crsf_joy, rc_teleop, e_stop en twist_mux.
-        self.declare_parameter('publish_rate', 50.0)
-        self.min_period = 1.0 / self.get_parameter('publish_rate').value
+        # Optionele begrenzing (0 = uit). De Crossfire-ontvanger levert ~38 pakketten/s, vaak
+        # per twee tegelijk gelezen; begrenzen op 50 Hz liet er maar ~19/s over. Dus standaard uit.
+        self.declare_parameter('publish_rate', 0.0)
+        rate = self.get_parameter('publish_rate').value
+        self.min_period = 1.0 / rate if rate > 0 else 0.0
         self.last_publish = 0.0
 
         self.link_timeout = self.get_parameter('link_timeout').value

@@ -158,10 +158,9 @@ rijden.
 
 ### Optimalisaties (CPU/RAM sparen voor de AI)
 - [x] Nav2 met `use_composition` (één proces i.p.v. ±12)
-- [x] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (~150 Hz); bespaart CPU in crsf_joy,
-      rc_teleop en twist_mux
+- [x] RC: gemeten ~38 Hz (geen 150); begrenzen heeft geen zin en werd weer uitgezet
 - [ ] Zware Python-nodes (esp32_bridge, lidar_odom_fix) eventueel naar C++
-- [x] Gemeten (28-10-2026, navigatie aan): CPU 1,78 -> 1,11 kernen, geheugen ROS 2049 -> 1584 MB,
+- [x] Gemeten (28-10-2026, navigatie aan, stilstaand): CPU 1,78 -> 1,11 kernen, geheugen ROS 2049 -> 1584 MB,
       47 -> 36 processen
 
 ### Fase 4 – Camera en beeldherkenning op de GPU
