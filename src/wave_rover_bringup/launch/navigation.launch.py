@@ -5,8 +5,9 @@ vergelijkt scans met de kaart (zoals bij het mappen) en is veel minder afhankeli
 van goede odometrie dan AMCL; dat is belangrijk zonder wielencoders. slam_toolbox
 publiceert /map en de TF map -> odom.
 
-Navigatie: de Nav2-navigatiestack (zonder AMCL en map_server). De snelheidscommando's
-gaan naar /cmd_vel_nav2 (ingang van twist_mux).
+Navigatie: de Nav2-navigatiestack (zonder AMCL en map_server), samengevoegd in één
+proces (`nav2_container`, composition) om CPU en geheugen te sparen. De
+snelheidscommando's gaan naar /cmd_vel_nav2 (ingang van twist_mux).
 
 Startpositie: de laatst bekende positie uit `<map>.lastpose` (bijgehouden door pose_saver),
 anders het beginpunt van de kaart. Corrigeren kan met 2D Pose Estimate in RViz; die komt
@@ -90,6 +91,14 @@ def generate_launch_description():
             'map', default_value=default_map(),
             description='Opgeslagen kaart (posegraph van slam_toolbox), zonder extensie'),
         OpaqueFunction(function=localization_actions),
+        # Eén proces voor alle Nav2-nodes (i.p.v. ±12): minder geheugen en DDS-overhead.
+        Node(
+            name='nav2_container',
+            package='rclcpp_components',
+            executable='component_container_isolated',
+            parameters=[nav2_params, {'autostart': True}],
+            output='screen',
+        ),
         IncludeLaunchDescription(
             PathJoinSubstitution(
                 [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']),
@@ -97,6 +106,8 @@ def generate_launch_description():
                 'params_file': nav2_params,
                 'use_sim_time': 'false',
                 'autostart': 'true',
+                'use_composition': 'True',
+                'container_name': 'nav2_container',
             }.items(),
         ),
         Node(

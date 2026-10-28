@@ -46,6 +46,11 @@ class CrsfJoy(Node):
         self.declare_parameter('port', '/dev/ttyTHS1')
         self.declare_parameter('baud', 420000)
         self.declare_parameter('link_timeout', 0.3)
+        # De zender stuurt ~150 pakketten/s; 50 Hz is ruim genoeg om te rijden en spaart CPU
+        # in crsf_joy, rc_teleop, e_stop en twist_mux.
+        self.declare_parameter('publish_rate', 50.0)
+        self.min_period = 1.0 / self.get_parameter('publish_rate').value
+        self.last_publish = 0.0
 
         self.link_timeout = self.get_parameter('link_timeout').value
         port = self.get_parameter('port').value
@@ -98,9 +103,11 @@ class CrsfJoy(Node):
         if frame_type == TYPE_LINK_STATISTICS and len(payload) >= 3:
             self.link_quality = payload[2]
         elif frame_type == TYPE_RC_CHANNELS and len(payload) >= 22:
-            self.last_channels_time = time.monotonic()
-            if not self.connected():
+            now = time.monotonic()
+            self.last_channels_time = now
+            if not self.connected() or now - self.last_publish < self.min_period:
                 return
+            self.last_publish = now
             axes = [max(-1.0, min(1.0, (ch - CRSF_MID) / CRSF_HALF_RANGE))
                     for ch in unpack_channels(payload)]
             msg = Joy()
