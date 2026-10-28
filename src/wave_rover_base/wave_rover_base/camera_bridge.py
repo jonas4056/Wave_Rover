@@ -11,7 +11,8 @@ Deze node:
   beeldherkenning die niet elk beeld nodig heeft. Een topic zonder luisteraars slaat hij over;
 - publiceert elke seconde het aantal beelden op camera/frames (voor de health-controle,
   zodat die niet de hele beeldstroom hoeft te ontvangen);
-- geeft het nieuwste beeld via HTTP (`http_port`, /latest.jpg?after=<nr>) aan het dashboard.
+- geeft het nieuwste voorbeeldbeeld (640x360, aparte stroom op `preview_port`) via HTTP
+  (`http_port`, /latest.jpg?after=<nr>) aan het dashboard.
   Het dashboard vraagt pas een volgend beeld als het vorige op het scherm staat, dus er kan
   geen achterstand ontstaan. Via rosbridge liep die bij een trage gsm op tot vele seconden.
 """
@@ -38,6 +39,7 @@ class CameraBridge(Node):
         super().__init__('camera_bridge')
         self.declare_parameter('host', '127.0.0.1')
         self.declare_parameter('port', 5600)
+        self.declare_parameter('preview_port', 5601)
         self.declare_parameter('frame_id', 'camera_link')
         # 30 fps: vloeiend en beter voor beeldherkenning; 15 fps halveert de CPU van nvargus.
         self.declare_parameter('fps', 30)
@@ -48,7 +50,9 @@ class CameraBridge(Node):
         self.low_every = max(1, round(fps / self.get_parameter('low_rate').value))
         self.frame_count = 0
         self.frames_reported = 0
-        self.address = (self.get_parameter('host').value, self.get_parameter('port').value)
+        host = self.get_parameter('host').value
+        self.address = (host, self.get_parameter('port').value)
+        self.preview_address = (host, self.get_parameter('preview_port').value)
         self.frame_id = self.get_parameter('frame_id').value
         self.request_file = self.get_parameter('request_file').value
 
@@ -69,18 +73,21 @@ class CameraBridge(Node):
         os.makedirs(os.path.dirname(self.request_file), exist_ok=True)
         with open(self.request_file, 'w') as f:
             f.write(f'fps={fps}\n')
-        threading.Thread(target=self.receive_loop, daemon=True).start()
+        threading.Thread(target=self.receive_loop, args=(self.address, self.publish),
+                         daemon=True).start()
+        threading.Thread(target=self.receive_loop,
+                         args=(self.preview_address, self.set_preview), daemon=True).start()
 
-    def receive_loop(self):
+    def receive_loop(self, address, handle):
         while rclpy.ok():
             try:
-                with socket.create_connection(self.address, timeout=5) as sock:
-                    self.get_logger().info(f'Verbonden met camera op {self.address[0]}:{self.address[1]}')
-                    self.read_frames(sock)
+                with socket.create_connection(address, timeout=5) as sock:
+                    self.get_logger().info(f'Verbonden met camera op {address[0]}:{address[1]}')
+                    self.read_frames(sock, handle)
             except OSError:
                 time.sleep(1.0)  # camera start nog op (Argus heeft enkele seconden nodig)
 
-    def read_frames(self, sock):
+    def read_frames(self, sock, handle):
         buf = b''
         while rclpy.ok():
             chunk = sock.recv(65536)
@@ -96,7 +103,7 @@ class CameraBridge(Node):
                 if end < 0:
                     buf = buf[start:]
                     break
-                self.publish(buf[start:end + 2])
+                handle(buf[start:end + 2])
                 buf = buf[end + 2:]
 
     def publish_frames(self):
@@ -140,12 +147,14 @@ class CameraBridge(Node):
 
         return FrameHandler
 
-    def publish(self, jpeg):
-        self.frame_count += 1
+    def set_preview(self, jpeg):
         with self.frame_ready:
             self.latest_jpeg = jpeg
-            self.latest_number = self.frame_count
+            self.latest_number += 1
             self.frame_ready.notify_all()
+
+    def publish(self, jpeg):
+        self.frame_count += 1
         full = self.pub.get_subscription_count() > 0
         low = (self.frame_count % self.low_every == 0
                and self.low_pub.get_subscription_count() > 0)
