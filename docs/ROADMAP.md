@@ -97,6 +97,10 @@ bij de fase tussen haakjes; is een idee klaar, vink het dan hier en daar af.
 - [ ] (M) Verboden zones op de kaart (Nav2-keepoutfilter), bv. trap en tapijt; tekenen in de app
 - [ ] (S) Links/rechts ongelijk bij ter plaatse draaien corrigeren (fase 3)
 - [ ] (M) Locaties met een naam ("zetel", "tv") en er vanuit de app naartoe rijden (fase 3)
+- [ ] (S) Batterij-% corrigeren voor de belasting: de app gaf 47%, maar in rust waren de cellen
+      3,97 V gemiddeld (= ±73%). Onder belasting zakt de spanning, dus `power_guard` (20%)
+      sluit de Jetson te vroeg af. Corrigeren met de gemeten stroom (spanning + stroom x
+      weerstand), eerst de weerstand meten
 
 **Pupper-inspiratie** (fase 6)
 - [ ] (M) Spraak uit: Piper TTS op de USB-luidspreker (batterijmeldingen, "ik ben er")
@@ -214,7 +218,9 @@ Volgende stappen, in deze volgorde:
 
 Te controleren:
 - **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
-  warm. Als ze vol is (4,2 V): een dag laten rusten en meten. Boven ~4,1 V = waarschijnlijk
+  warm. 29-10-2026, halfleeg na gebruik en 15 min rust: 3,98 / 3,99 / 3,95 V (verschil
+  0,04 V = goed). Daarna apart volgeladen in de externe lader (= weer gelijk).
+  Nog doen: vol een dag laten rusten en meten. Boven ~4,1 V = waarschijnlijk
   oké; duidelijk lager = vervangen.
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
