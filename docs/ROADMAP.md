@@ -119,16 +119,37 @@ je het robotmodel in RViz op de pc ziet.
 muren.
 
 ### Fase 3 – Autonoom navigeren
-- [x] Nav2 instellen voor een robot zonder encoders (RPP, op de plaats draaien, lokalisatie met slam_toolbox)
+- [x] Nav2 instellen voor een robot zonder encoders (RPP, op de plaats draaien; lokalisatie
+      sinds 29-10-2026 met AMCL, zie hieronder)
 - [x] Navigeren naar een punt dat je in RViz aanklikt
 - [x] Zelf verkennen (module `explore`, eigen verkenner `explorer.py`, knop in de app bij Kaarten).
       Eerste volledige rit 29-10-2026: living + twee gangen in kaart (`livingauto2`, 13 doelen),
       met floor_obstacles aan; de camera zag de trap naar beneden als obstakel
+- [x] Lidarscans rechtzetten voor het draaien (`scan_deskew`, 29-10-2026): de driver stempelt
+      het begin van de omwenteling (97 ms) en de scan was bij draaien tot 7° uitgesmeerd.
+      Nu stempel op het midden en elk punt met de gyro teruggedraaid; rf2o 8x nauwkeuriger
+      bij ter plaatse draaien
+- [x] Lokalisatie op een vaste kaart met **AMCL** (`OmniMotionModel`; het differentiële model
+      liep weg bij ter plaatse draaien met zijdelings slippen). Na ritten 3 cm / 2,4° naast
+      "Zoek mezelf" (slam_toolbox-lokalisatie: 12-14°). `localization:=slam` kan nog
+- [x] Gyroregeling van de draaisnelheid in esp32_bridge (PI op de gyro, `yaw_loop`): bochten
+      volgen nu 93-94% van wat Nav2 vraagt (was onderstuurd)
+- [x] Niet rijden met de laadkabel in (`/charging_lock` van battery_monitor, lock in twist_mux;
+      ook de RC en de app-joystick)
+- [ ] Oranje stippen (en de robot) springen in de app tijdens het rijden: waarschijnlijk de
+      correcties van AMCL (elke 10 cm / 11°). Meten op `livingauto4` hoe groot ze zijn; zo
+      nodig AMCL rustiger afstellen
 - [ ] Verkennen: RPP meldt in smalle doorgangen vaak "collision ahead" en schuift terug;
       inflatie/collision-detectie van RPP afstellen
-- [ ] Verkennen: floor_obstacles standaard mee laten starten (lage obstakels, trap)
-- [ ] **Trap/afgrond:** niet vertrouwen op de diepteschatting alleen; een naar beneden gerichte
-      ToF-sensor vooraan als vangnet (stopt de motoren rechtstreeks)
+- [ ] Verkennen: floor_obstacles standaard mee laten starten (lage obstakels)
+- [ ] **Trap/afgrond:** floor_obstacles ziet alleen wat *uit* de vloer steekt; een trap naar
+      beneden is een gat en wordt niet gezien (29-10-2026: tijdens het verkennen van de trap
+      gereden, opgevangen). De lidar kijkt over het trapgat heen, dus de verkenner wil er
+      heen. Voorlopig: enkel verkennen met de trap afgesloten (iets van ≥25 cm hoog) of met
+      iemand klaar om te vangen. Mogelijk: in floor_obstacles ook "verder weg dan de vloer"
+      (onder de horizon) als rand markeren; eerst beelden aan de trap opnemen om valse gaten
+      (donkere vloer, schaduw, weerkaatsing) uit te sluiten. Een naar beneden gerichte
+      ToF-sensor vooraan blijft het betrouwbaarste vangnet
 - [ ] Links/rechts ongelijk bij ter plaatse draaien (rechts ±20% sneller, draait niet rond
       zijn as): opmeten met de lidar en correctie per kant in esp32_bridge
 - [ ] Locaties met een naam opslaan ("zetel", "tv", "deur")
@@ -136,23 +157,25 @@ muren.
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
 rijden.
 
-### Waar we gebleven zijn (stand 28-10-2026, einde van de dag)
-Werkt en getest vandaag: RC aan 150 Hz (UART-fix), objectherkenning en vloerobstakels op de
-GPU, vloeiende camerabeelden in de app (MJPEG 640x360), oranje/rode obstakelstippen op de
-kaart, "Zoek mezelf op de kaart", gyronulpunt (de robot draaide op de kaart), de app laadt
-zichzelf na een update, hotspot `WaveRover` als er geen bekend wifinetwerk is (met de iPhone
-getest).
+### Waar we gebleven zijn (stand 29-10-2026, middag)
+Nieuw vandaag (zie fase 3): zelf verkennen, scans rechtzetten voor het draaien
+(`scan_deskew`), AMCL als lokalisatie, gyroregeling voor bochten, niet rijden met de
+laadkabel in. Pauze om te laden (batterij 47%), Jetson afgesloten.
+
+Kaarten: `livingauto4` is de nieuwste (rechtgezette scans, scherpere muren), maar niet af:
+verkennen gestopt omdat hij van de trap reed. Het tapijt is weg (de wielen draaiden erop
+door). `livingauto2` heeft ook de gangen, maar met uitgesmeerde scans gemaakt.
 
 Opstarten: Jetson aanzetten, thuis komt hij vanzelf op de wifi; app openen; modules aanzetten
 in de app. Gebruik je de app al lang open? Hij herlaadt zichzelf na een update.
 
 Volgende stappen, in deze volgorde:
-1. ~~Zelf verkennen~~: werkt sinds 29-10-2026 (zie fase 3); nog afstellen in smalle
-   doorgangen en floor_obstacles standaard mee.
-2. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
-3. Lokalisatie tijdens het draaien opnieuw testen (kan door het gyronulpunt opgelost zijn).
+1. Navigeren op `livingauto4` en meten waarom de stippen tijdens het rijden springen
+   (AMCL-correcties?); zo nodig AMCL rustiger afstellen.
+2. Eventueel opnieuw verkennen (trap afgesloten) voor een volledige kaart met de gangen.
+3. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
 4. Later: spraak (USB-luidspreker + Piper), VLM-scènebeschrijving, detectie en vloerobstakels
-   in één proces.
+   in één proces; gaten (trap) in floor_obstacles.
 
 Te controleren:
 - **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
@@ -194,8 +217,8 @@ Te controleren:
 ### Navigatie- en rijprestaties verbeteren (zodra de UPS-batterij terug werkt)
 - [ ] Route strakker volgen en vloeiender bochten in auto-modus (RPP verder afstellen of
       opnieuw MPPI proberen nu de draaisnelheid gekalibreerd is)
-- [ ] Lokalisatie tijdens het draaien (scans die even naast de muren liggen); mogelijk
-      (deels) door het gyronulpunt, dat op 28-10-2026 is opgelost: opnieuw testen
+- [x] Lokalisatie tijdens het draaien (scans die even naast de muren liggen): opgelost op
+      29-10-2026 met `scan_deskew` en AMCL (zie fase 3)
 - [ ] Testrondes met meerdere doelen, slaagpercentage bijhouden (demo: 6 van 11 aangekomen)
 
 ### Optimalisaties (CPU/RAM sparen voor de AI)
