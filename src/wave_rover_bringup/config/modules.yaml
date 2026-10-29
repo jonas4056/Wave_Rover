@@ -22,14 +22,20 @@ modules:
     package: wave_rover_bringup
     launch: slam.launch.py
     requires: [odometry]
-    conflicts: [navigation]
+    conflicts: [navigation, explore]
   navigation:
     description: Autonoom navigeren met Nav2 op een opgeslagen kaart (lokalisatie met slam_toolbox)
     package: wave_rover_bringup
     launch: navigation.launch.py
     # Kaart: maps/current (kiezen in het dashboard), zie navigation.launch.py.
     requires: [odometry]
-    conflicts: [slam]
+    conflicts: [slam, explore]
+  explore:
+    description: Zelf verkennen en een kaart maken (slam_toolbox + Nav2); start met "Verken" bij Kaarten
+    package: wave_rover_bringup
+    launch: explore.launch.py
+    requires: [odometry]
+    conflicts: [slam, navigation]
   camera:
     description: CSI-camera -> /camera/image/compressed (hardware-JPEG, 30 fps)
     package: wave_rover_bringup

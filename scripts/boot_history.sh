@@ -15,8 +15,10 @@ journalctl --list-boots --no-pager | tail -n "$COUNT" | while read -r idx id res
     last=$(sudo journalctl -b "$id" --no-pager -o short-iso -n 1 | tail -n 1 | cut -c1-19)
     if [ "$idx" = "0" ]; then
         result="(actief)"
-    # Bij een normale afsluiting stopt systemd tientallen services; bij een bevriezing geen enkele.
-    elif [ "$(sudo journalctl -b "$id" --no-pager -q | grep -cE 'systemd\[1\]: Stopping ')" -gt 10 ]; then
+    # Bij een normale afsluiting stopt systemd op het einde tientallen services; bij een
+    # bevriezing of stroomverlies geen enkele. Alleen het einde bekijken: tijdens de sessie
+    # stopt systemd ook af en toe iets (ssh-sessies, herstarte diensten).
+    elif [ "$(sudo journalctl -b "$id" --no-pager -q -n 300 | grep -cE 'systemd\[1\]: Stopping ')" -gt 10 ]; then
         result="netjes"
     else
         result="ABRUPT"

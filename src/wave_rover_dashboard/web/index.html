@@ -96,6 +96,16 @@
       <p class="hint" id="maps-message">Nieuwe kaart: zet de module <b>slam</b> aan, rijd rustig
         rond met de joystick (stand 1) en sla de kaart op. Kies ze daarna met "gebruik" en zet
         de module <b>navigation</b> aan.</p>
+      <h3 class="subhead">Zelf verkennen</h3>
+      <form id="explore" class="map-save">
+        <input id="explore-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
+               placeholder="naam nieuwe kaart, bv. slaapkamer" pattern="[A-Za-z0-9_-]{1,40}" required>
+        <button type="submit">Verken</button>
+      </form>
+      <button type="button" id="explore-stop" class="explore-stop" hidden>Stop verkennen</button>
+      <p class="hint" id="explore-status">Zet de robot in de nieuwe ruimte en tik op Verken. Hij
+        rijdt zelf rond tot alles verkend is, rijdt terug naar het startpunt en bewaart de kaart.
+        Je RC-zender en de noodstop hebben altijd voorrang.</p>
     </section>
 
     <section class="card">

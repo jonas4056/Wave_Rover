@@ -355,6 +355,23 @@ button {
 
 .map-save button { background: var(--accent); color: #fff; }
 
+.subhead {
+  margin: 18px 0 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.explore-stop {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(242, 92, 92, 0.2);
+  color: var(--bad);
+  font-weight: 600;
+}
+.explore-stop[hidden] { display: none; }
+
 /* Afsluiten bij lege batterij */
 .shutdown-banner {
   display: flex;
