@@ -406,6 +406,8 @@ NVIDIA-GPU.
   de hotspot starten de andere niet meer. Thuis verandert er niets (pc ziet de topics).
 - Hardware-watchdog (`RuntimeWatchdogSec=30s`), herstart na kernelpanic (`kernel.panic=10`,
   `kernel.hung_task_panic=1`), NVMe Host Memory Buffer uit (`nvme.max_host_mem_size_mb=0`).
+- Diensten `dnsmasq`, `isc-dhcp-server` en `isc-dhcp-server6` uitgezet (29-10-2026): ze
+  faalden bij elke start en worden niet gebruikt (de hotspot gebruikt dnsmasq van NetworkManager).
 - `jonas` zit in de groepen `docker` en `dialout`, en heeft sudo zonder wachtwoord.
 - Pakket `docker-compose-v2` is geïnstalleerd.
 
