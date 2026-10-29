@@ -216,24 +216,27 @@ muren.
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
 rijden.
 
-### Waar we gebleven zijn (stand 29-10-2026, middag)
-Nieuw vandaag (zie fase 3): zelf verkennen, scans rechtzetten voor het draaien
-(`scan_deskew`), AMCL als lokalisatie, gyroregeling voor bochten, niet rijden met de
-laadkabel in. Pauze om te laden (batterij 47%), Jetson afgesloten.
+### Waar we gebleven zijn (stand 29-10-2026, avond)
+Nieuw vandaag: `livingauto5` (living met de deur dicht, zelf verkend in 2 min, nu de kaart
+voor de navigatie), esp32_bridge in C++ (9,4% -> 0,8% CPU), module **scene** ("Wat zie je?",
+Qwen3-VL-2B op de GPU + Vlaamse stem via de USB-speaker), nieuwe app (kaart schermvullend,
+functies achter knoppen onderaan, rijden met de joystick over het camerabeeld). Image
+opnieuw gebouwd (backup van het vorige: `wave_rover:voor-scene`).
 
-Kaarten: `livingauto4` is de nieuwste (rechtgezette scans, scherpere muren), maar niet af:
-verkennen gestopt omdat hij van de trap reed. Het tapijt is weg (de wielen draaiden erop
-door). `livingauto2` heeft ook de gangen, maar met uitgesmeerde scans gemaakt.
+Opstarten: Jetson aanzetten, thuis komt hij vanzelf op de wifi; app openen.
+- Rijden + camera + "Vertel" werken overal, ook zonder kaart.
+- Navigeren: module navigation aan (kaart `livingauto5`), eerst "Zoek mij". AMCL schommelt
+  nog ±3-4° (stippen springen), zie fase 3. Andere ruimte: eerst "Verken" (trap afsluiten!).
 
-Opstarten: Jetson aanzetten, thuis komt hij vanzelf op de wifi; app openen; modules aanzetten
-in de app. Gebruik je de app al lang open? Hij herlaadt zichzelf na een update.
-
-Volgende stappen, in deze volgorde:
-1. Navigeren op `livingauto4` en meten waarom de stippen tijdens het rijden springen
-   (AMCL-correcties?); zo nodig AMCL rustiger afstellen.
-2. Eventueel opnieuw verkennen (trap afgesloten) voor een volledige kaart met de gangen.
-3. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
-4. Tussendoor: iets uit de [Ideeën voor tussendoor](#ideeën-voor-tussendoor-nice-to-have).
+Volgende stappen (kiezen):
+1. Praten met de robot: chat in de app (raadspel "ik zie, ik zie wat jij niet ziet" met de
+   camera, tijd/batterij vragen); Qwen3-VL kan ook zonder foto praten. Spraak via de microfoon
+   van de iPhone: de app moet dan via HTTPS (Safari geeft de microfoon niet op http);
+   herkenning door de iPhone zelf (Web Speech API, kost de Jetson niets) of Whisper op de GPU.
+2. "Zoek de oranje bal en rijd ernaartoe" (zie Ideeën; kaders met Qwen3-VL getest).
+3. Qwen3-VL-4B proberen (`model:=qwen3vl-4b`; download wordt hervat met
+   `scripts/download_scene_models.sh`).
+4. AMCL rustiger (geparkeerd, metingen in fase 3).
 
 Te controleren:
 - **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
@@ -256,9 +259,12 @@ Te controleren:
       (zonder odometrie/navigatie te stoppen). Aanleiding: bij het uittrekken van de adapter
       schakelt de UPS over naar batterij en valt de lidar-USB ~1 s weg (gezien 23-10-2026);
       de driver bleef dan hangen zonder te stoppen.
-- [ ] Aandachtspunt: de USB-chip (CP2102N) van de lidar liep één keer vast na snel na elkaar
-      herstarten van de container ('cp210x_open - Unable to enable UART'); alleen USB uit- en
-      insteken hielp. Komt het terug: automatische USB-reset of schakelbare USB-poort
+- [ ] Aandachtspunt: de USB-chip (CP2102N) van de lidar liep vast na het herstarten van de
+      container ('cp210x_open - Unable to enable UART'): eerst eens op 21-10, opnieuw op 29-10
+      bij `docker compose up -d` (de herstart erna ging wel goed). `authorized` 0/1 en
+      `usbreset` van alleen de lidar (USB 1-2.2) helpen NIET (chip antwoordt niet meer); alleen
+      uit- en insteken. Let op: de ESP32 heeft dezelfde chip (10c4:ea60): nooit op chipnummer
+      resetten. Oplossing nog te zoeken: schakelbare USB-poort of de oorzaak bij het openen
 - [ ] Spraakmodule testen: "display power", "robot stop", "go ahead"
 - [x] Laatst bekende positie onthouden (`pose_saver` -> `<kaart>.lastpose`); de navigatie start daar
 - [x] Globaal lokaliseren: knop "Zoek mezelf op de kaart" in het dashboard (28-10-2026,
