@@ -113,6 +113,12 @@ bij de fase tussen haakjes; is een idee klaar, vink het dan hier en daar af.
 **Beeld** (fase 4)
 - [ ] (M) Beeldtaalmodel (VLM) dat beschrijft wat de camera ziet: module scene, knop "Wat zie
       je?" in de app (29-10-2026, in test; zie fase 6)
+- [ ] (M) **Zoek een voorwerp en rijd ernaartoe** ("zoek de oranje bal"): Qwen3-VL geeft een kader
+      rond een gevraagd voorwerp (getest 29-10-2026: djembe en vuilbak exact, 1-2 s; "niet
+      gevonden" in 0,3 s). Richting uit de x van het kader, afstand uit de onderkant (vloervlak:
+      lens 10,5 cm, f 989,5 px; djembe 1,6 m / +20°). Niet gezien: 40° draaien en opnieuw kijken.
+      Dan een Nav2-doel 30 cm ervoor, onderweg opnieuw kijken, bij aankomst iets zeggen.
+      Eerste stap naar "zoek de televisie" (fase 6)
 - [ ] (S-M) Live vertellen wat er beweegt ("ik zie een bal van links naar rechts rollen"):
       YOLO-detecties over meerdere beelden volgen; een VLM per beeld is daarvoor te traag
 - [ ] (M) Herkende objecten op de kaart aanduiden (richting uit het beeld + lidar-afstand)
