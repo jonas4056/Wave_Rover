@@ -25,14 +25,20 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 
-# Kort houden: Qwen3-VL-2B vertelde anders tot de limiet en verzon dan dingen (29-10-2026).
+# Getest op een camerabeeld (29-10-2026): zonder voorbeeld en met lage temperature viel
+# Qwen3-VL-2B in herhaallussen ("een kast, een wastafel, een kast, ...") of gaf het alleen
+# losse woorden; met een voorbeeldzin en de sampling die Qwen aanraadt (QWEN_SAMPLING) twee
+# gewone zinnen in 1-2 s.
 SYSTEM_PROMPT = (
-    'Je bent de ogen van een kleine robot op wielen die door een huis rijdt. Je antwoordt '
-    'altijd in het Nederlands, kort en zoals je het hardop zou zeggen: hoogstens twee korte '
-    'zinnen, samen minder dan 30 woorden. Noem alleen de belangrijkste dingen en waar ze staan '
-    '(links, rechts, voor mij). Geen opsommingen, geen opmaak, geen emoji. Verzin niets: '
-    'twijfel je, zeg dan dat je het niet goed ziet.'
+    'Je bent de ogen van een kleine robot op wielen die door een huis rijdt. Je vertelt in '
+    'het Nederlands wat je ziet, in twee korte, gewone zinnen zoals je het hardop zou zeggen. '
+    'Zeg waar de belangrijkste dingen staan (links, rechts, voor mij). Geen opsommingen, geen '
+    'opmaak. Verzin niets: twijfel je, zeg dat dan.\n'
+    'Voorbeeld: "Ik zie een woonkamer met een grijze zetel aan de rechterkant. Vlak voor mij '
+    'ligt een rode bal op de vloer."'
 )
+# presence_penalty voorkomt herhalingen (aanbevolen voor Qwen3-VL Instruct).
+QWEN_SAMPLING = {'temperature': 0.7, 'top_p': 0.8, 'top_k': 20, 'presence_penalty': 1.5}
 DEFAULT_QUESTION = 'Wat zie je? Begin met "Ik zie".'
 
 
@@ -43,7 +49,7 @@ class SceneDescriber(Node):
         self.declare_parameter('server', 'http://127.0.0.1:8090')
         # Kleiner beeld = minder beeldtokens = sneller; 640 px is genoeg voor een beschrijving.
         self.declare_parameter('image_width', 640)
-        self.declare_parameter('max_tokens', 80)
+        self.declare_parameter('max_tokens', 100)
         self.declare_parameter('piper', '/opt/piper/piper')
         self.declare_parameter('voice', '/home/ubuntu/wave_rover/models/piper/nl_BE-nathalie-medium.onnx')
         # ALSA-naam van de USB-speaker ("USB2.0 Device" -> kaart Device).
@@ -144,7 +150,7 @@ class SceneDescriber(Node):
                 ]},
             ],
             'max_tokens': self.p['max_tokens'],
-            'temperature': 0.3,
+            **QWEN_SAMPLING,
         }
         request = urllib.request.Request(
             self.p['server'] + '/v1/chat/completions', data=json.dumps(body).encode(),
@@ -155,8 +161,7 @@ class SceneDescriber(Node):
         if choice.get('finish_reason') == 'length':
             # Afgebroken door max_tokens: alleen de volledige zinnen uitspreken.
             end = max(text.rfind(c) for c in '.!?')
-            if end > 0:
-                text = text[:end + 1]
+            text = text[:end + 1] if end > 0 else ' '.join(text.split()[:30]) + '.'
         return text
 
     def speak(self, text):
