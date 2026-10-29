@@ -14,6 +14,8 @@ from launch_ros.actions import Node
 VLM_DIR = '/home/ubuntu/wave_rover/models/vlm'
 MODELS = {
     'qwen3vl-2b': ('Qwen3VL-2B-Instruct-Q4_K_M.gguf', 'mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf'),
+    'qwen3vl-4b': ('Qwen3VL-4B-Instruct-Q4_K_M.gguf', 'mmproj-Qwen3VL-4B-Instruct-Q8_0.gguf'),
+    # Getest 29-10-2026: beter Nederlands, maar ±6 s per foto, ±3,5 GB en geen kaders.
     'gemma3-4b': ('gemma-3-4b-it-Q4_K_M.gguf', 'mmproj-model-f16.gguf'),
 }
 
