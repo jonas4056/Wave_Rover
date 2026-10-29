@@ -79,12 +79,20 @@ class PoseSaver(Node):
     def on_floor(self, msg):
         self.floor = msg
 
-    def to_map_cm(self, frame, xy):
-        """Punten (n x 2, m) uit `frame` naar `map`, in cm, één per 5 cm."""
+    def to_map_cm(self, header, xy):
+        """Punten (n x 2, m) uit het frame van `header` naar `map`, in cm, één per 5 cm.
+
+        Met de positie op het moment van de meting: met de laatste positie stonden de punten
+        tijdens het draaien scheef (69 graden/s x ~0,2 s vertraging).
+        """
         try:
-            tf = self.tf_buffer.lookup_transform('map', frame, Time()).transform
+            tf = self.tf_buffer.lookup_transform('map', header.frame_id, Time.from_msg(header.stamp))
         except TransformException:
-            return None
+            try:  # nog niet in de buffer of te oud: dan toch de laatste positie
+                tf = self.tf_buffer.lookup_transform('map', header.frame_id, Time())
+            except TransformException:
+                return None
+        tf = tf.transform
         q = tf.rotation
         yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
         c, s = math.cos(yaw), math.sin(yaw)
@@ -99,14 +107,14 @@ class PoseSaver(Node):
             r = np.asarray(s.ranges, np.float32)
             a = s.angle_min + np.arange(len(r)) * s.angle_increment
             ok = np.isfinite(r) & (r > s.range_min) & (r < min(s.range_max, self.lidar_max_range))
-            msg = self.to_map_cm(s.header.frame_id,
+            msg = self.to_map_cm(s.header,
                                  np.stack([r[ok] * np.cos(a[ok]), r[ok] * np.sin(a[ok])], 1))
             if msg is not None:
                 self.lidar_pub.publish(msg)
         if self.floor is not None:
             f, self.floor = self.floor, None  # module gestopt: niets meer sturen
             pts = point_cloud2.read_points_numpy(f, field_names=('x', 'y'), skip_nans=True)
-            msg = self.to_map_cm(f.header.frame_id, pts.reshape(-1, 2))
+            msg = self.to_map_cm(f.header, pts.reshape(-1, 2))
             if msg is not None:
                 self.floor_pub.publish(msg)
 
