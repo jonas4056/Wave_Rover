@@ -1,4 +1,8 @@
-"""RPLidar C1 op /dev/lidar -> /scan (frame "laser"), via de Slamtec-driver sllidar_ros2."""
+"""RPLidar C1 op /dev/lidar -> /scan (frame "laser").
+
+De Slamtec-driver sllidar_ros2 publiceert /scan_raw; scan_deskew zet elke scan recht voor het
+draaien tijdens de omwenteling (gyro) en stempelt het midden, en publiceert /scan.
+"""
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -20,6 +24,14 @@ def generate_launch_description():
             output='screen',
             # De C1 geeft soms een time-out (80008004) bij het verbinden vlak na een stop:
             # dan gewoon opnieuw proberen.
+            respawn=True,
+            respawn_delay=2.0,
+            remappings=[('scan', 'scan_raw')],
+        ),
+        Node(
+            package='wave_rover_base',
+            executable='scan_deskew',
+            output='screen',
             respawn=True,
             respawn_delay=2.0,
         ),
