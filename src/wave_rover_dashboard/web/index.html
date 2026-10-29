@@ -67,8 +67,6 @@
         <span>Laadkabel in: rijden geblokkeerd</span>
       </div>
       <div id="nav-status" class="nav-status">geen kaart</div>
-      <!-- Camerabeeld klein over de kaart tijdens het rijden; tik = groter/kleiner -->
-      <div id="camera-pip" class="camera-pip" hidden></div>
     </div>
 
     <div class="map-tools" role="group" aria-label="Kaart">
@@ -89,11 +87,10 @@
       </div>
       <div class="sheet-body">
 
+        <!-- Rijden: camerabeeld met de joystick erover; de kaart erboven blijft zichtbaar -->
         <div class="panel" data-panel="drive" data-title="Rijden" hidden>
-          <div class="drive-row">
-            <div id="joystick" class="joystick" aria-label="Joystick">
-              <div id="knob" class="knob"></div>
-            </div>
+          <div class="drive-view">
+            <div id="drive-camera-slot" class="drive-camera-slot"></div>
             <div class="drive-side">
               <div class="speed" role="group" aria-label="Snelheid">
                 <button type="button" data-speed="0" class="active">1</button>
@@ -102,9 +99,10 @@
               </div>
               <button type="button" id="drive-camera" class="toggle"><svg class="icon"><use href="#i-camera"/></svg><span>Camera</span></button>
             </div>
+            <div id="joystick" class="joystick" aria-label="Joystick">
+              <div id="knob" class="knob"></div>
+            </div>
           </div>
-          <p class="hint">Vinger op de joystick = rijden, loslaten = stoppen. De RC-zender heeft
-            altijd voorrang.</p>
         </div>
 
         <div class="panel" data-panel="maps" data-title="Kaarten" hidden>

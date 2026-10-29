@@ -380,18 +380,26 @@ button {
   font-weight: 600;
 }
 
-/* Rijden: joystick links, snelheid en camera ernaast; zo blijft de kaart zichtbaar */
-.drive-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
+/* Rijden: camerabeeld met de joystick (rechts, duim) en snelheid/camera (links) erover */
+.drive-view {
+  position: relative;
+  min-height: 190px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #121821;
 }
 
+.drive-camera-slot .camera-image,
+.drive-camera-slot .camera-hint { border-radius: 0; }
+
 .drive-side {
+  position: absolute;
+  top: 8px;
+  left: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  z-index: 2;
 }
 
 .speed {
@@ -400,10 +408,10 @@ button {
 }
 
 .speed button {
-  width: 44px;
-  padding: 10px 0;
+  width: 40px;
+  padding: 8px 0;
   border-radius: 10px;
-  background: var(--card-2);
+  background: var(--glass);
   font-weight: 700;
 }
 
@@ -414,9 +422,9 @@ button {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 10px;
+  padding: 8px 10px;
   border-radius: 10px;
-  background: var(--card-2);
+  background: var(--glass);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -425,13 +433,16 @@ button {
 .toggle .icon { width: 18px; height: 18px; }
 
 .joystick {
-  position: relative;
-  flex: none;
-  width: min(190px, 46vw, 26vh);
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: min(170px, 44vw);
   aspect-ratio: 1;
-  margin: 0 auto;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--card-2) 0 60%, #1d2633 61%);
+  /* doorzichtig: het camerabeeld blijft zichtbaar onder de joystick */
+  background: radial-gradient(circle, rgba(43, 55, 73, 0.45) 0 60%, rgba(18, 24, 33, 0.55) 61%);
+  border: 1px solid rgba(232, 237, 244, 0.15);
+  z-index: 2;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -577,7 +588,7 @@ button {
   line-height: 1.4;
 }
 
-/* Camera: in het camerapaneel, of klein over de kaart (camera-pip) tijdens het rijden */
+/* Camera: in het camerapaneel, of onder de joystick in het rijpaneel */
 .camera-wrap { position: relative; }
 
 .camera-hint {
@@ -591,17 +602,6 @@ button {
   font-size: 0.85rem;
 }
 
-.camera-pip {
-  width: min(46vw, 240px);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-  transition: width 0.2s;
-}
-
-.camera-pip.large { width: min(calc(100vw - 96px), 640px); }
-.camera-pip .camera-image,
-.camera-pip .camera-hint { border-radius: 0; }
 
 .camera-overlay {
   position: absolute;

@@ -234,16 +234,15 @@ document.addEventListener('visibilitychange', () => {
   else if (!document.hidden) updateCamera();
 });
 
-// Eén camerabeeld (één videostroom): in het camerapaneel, of klein over de kaart zolang het
+// Eén camerabeeld (één videostroom): in het camerapaneel, of onder de joystick zolang het
 // rijpaneel open is (knop "Camera" daar; de keuze wordt onthouden). Anders uit.
 let driveCamera = true;
 try { driveCamera = localStorage.getItem('driveCamera') !== 'uit'; } catch (e) { /* privé */ }
 
 function updateCamera() {
-  const inPip = openPanel === 'drive' && driveCamera;
-  const wanted = openPanel === 'camera' || inPip;
-  $(inPip ? 'camera-pip' : 'camera-slot').append($('camera-wrap'));
-  $('camera-pip').hidden = !inPip;
+  const inDrive = openPanel === 'drive' && driveCamera;
+  const wanted = openPanel === 'camera' || inDrive;
+  $(inDrive ? 'drive-camera-slot' : 'camera-slot').append($('camera-wrap'));
   $('drive-camera').classList.toggle('active', driveCamera);
   if (wanted && !cameraOn) startCamera();
   if (!wanted && cameraOn) setCamera(false);
@@ -254,7 +253,6 @@ $('drive-camera').addEventListener('click', () => {
   try { localStorage.setItem('driveCamera', driveCamera ? 'aan' : 'uit'); } catch (e) { /* privé */ }
   updateCamera();
 });
-$('camera-pip').addEventListener('click', () => $('camera-pip').classList.toggle('large'));
 
 // --- panelen ------------------------------------------------------------------------
 
