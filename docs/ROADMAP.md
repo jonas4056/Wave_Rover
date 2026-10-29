@@ -121,7 +121,16 @@ muren.
 ### Fase 3 – Autonoom navigeren
 - [x] Nav2 instellen voor een robot zonder encoders (RPP, op de plaats draaien, lokalisatie met slam_toolbox)
 - [x] Navigeren naar een punt dat je in RViz aanklikt
-- [ ] Autonoom verkennen (`explore_lite`): de robot brengt zelf de ruimte in kaart ("Auto Exploration & Mapping")
+- [x] Zelf verkennen (module `explore`, eigen verkenner `explorer.py`, knop in de app bij Kaarten).
+      Eerste volledige rit 29-10-2026: living + twee gangen in kaart (`livingauto2`, 13 doelen),
+      met floor_obstacles aan; de camera zag de trap naar beneden als obstakel
+- [ ] Verkennen: RPP meldt in smalle doorgangen vaak "collision ahead" en schuift terug;
+      inflatie/collision-detectie van RPP afstellen
+- [ ] Verkennen: floor_obstacles standaard mee laten starten (lage obstakels, trap)
+- [ ] **Trap/afgrond:** niet vertrouwen op de diepteschatting alleen; een naar beneden gerichte
+      ToF-sensor vooraan als vangnet (stopt de motoren rechtstreeks)
+- [ ] Links/rechts ongelijk bij ter plaatse draaien (rechts ±20% sneller, draait niet rond
+      zijn as): opmeten met de lidar en correctie per kant in esp32_bridge
 - [ ] Locaties met een naam opslaan ("zetel", "tv", "deur")
 
 **Klaar wanneer:** de robot zelf de living in kaart brengt en daarna naar "tv" kan
@@ -138,10 +147,8 @@ Opstarten: Jetson aanzetten, thuis komt hij vanzelf op de wifi; app openen; modu
 in de app. Gebruik je de app al lang open? Hij herlaadt zichzelf na een update.
 
 Volgende stappen, in deze volgorde:
-1. **Zelf verkennen** (module `explore`): slam_toolbox in kaartmodus + Nav2 + een lichte
-   frontier-verkenner (rand tussen bekend en onbekend opzoeken en ernaartoe rijden), kaart
-   automatisch opslaan als hij klaar is, knop in de app. Nodig: de robot moet echt rijden,
-   dus eerst de batterij in orde.
+1. ~~Zelf verkennen~~: werkt sinds 29-10-2026 (zie fase 3); nog afstellen in smalle
+   doorgangen en floor_obstacles standaard mee.
 2. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
 3. Lokalisatie tijdens het draaien opnieuw testen (kan door het gyronulpunt opgelost zijn).
 4. Later: spraak (USB-luidspreker + Piper), VLM-scènebeschrijving, detectie en vloerobstakels

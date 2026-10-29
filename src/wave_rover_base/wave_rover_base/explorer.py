@@ -9,7 +9,9 @@ Onderdeel van de module explore (explore.launch.py: slam_toolbox maakt de kaart,
    Met `max_radius` (m, ook tijdens het verkennen aan te passen) blijft de robot binnen die
    straal rond het startpunt: een verdere rand wordt tot op de straal benaderd (bv. aan de
    voedingskabel, of om in één kamer te blijven).
-3. Geen bereikbare rand meer of `max_time` voorbij: terug naar het startpunt, kaart opslaan
+   Mislukt een doel, dan wordt de hele rand in de buurt overgeslagen (niet enkel dat punt:
+   test 29-10 bleef hij punten van één rand achter gesloten deuren proberen).
+3. Geen bereikbare rand meer, `max_failures` doelen na elkaar mislukt of `max_time` voorbij: terug naar het startpunt, kaart opslaan
    onder de naam (via map_manager) en kiezen voor de navigatie. Bij /explore/stop
    (std_msgs/Empty) of de stopknop van de kaart: meteen stoppen en opslaan, zonder terugrijden.
 Staat het chassis uit (schakelaar, /chassis/battery < 6 V), dan wacht hij en meldt dat; doelen
@@ -98,11 +100,12 @@ class Explorer(Node):
         # een lange rand op 4,3 m i.p.v. kleine randen op 1 m).
         self.declare_parameter('size_gain', 0.3)
         self.declare_parameter('stuck_time', 20.0)      # s zonder 15 cm vooruit = overslaan
-        self.declare_parameter('failed_radius', 0.4)    # m rond een mislukt doel overslaan
+        self.declare_parameter('failed_radius', 0.5)    # m: randen zo dicht bij een mislukt doel overslaan
+        self.declare_parameter('max_failures', 4)       # zoveel mislukte doelen na elkaar = klaar
         self.declare_parameter('max_radius', 0.0)       # m rond het startpunt, 0 = geen grens
         p = {n: self.get_parameter(n).value for n in (
             'speed', 'max_time', 'min_frontier', 'clearance', 'size_gain', 'stuck_time',
-            'failed_radius')}
+            'failed_radius', 'max_failures')}
         self.p = p
 
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -137,6 +140,7 @@ class Explorer(Node):
         self.cancel_reason = None  # 'verkend' / 'vast' / 'stop' als wij annuleren
         self.progress = (None, 0.0)  # (positie, tijd) van de laatste 15 cm vooruitgang
         self.goals_done = 0
+        self.failures = 0         # mislukte doelen na elkaar
         self.next_goal_at = 0.0
         self.paused = False       # chassis uit
         self.publish_status('Wacht op start (knop "Verken" in het dashboard)')
@@ -192,7 +196,7 @@ class Explorer(Node):
 
     def begin(self):
         self.name, self.pending, self.started = self.pending, '', time.monotonic()
-        self.start_pose, self.failed, self.goals_done = self.pose, [], 0
+        self.start_pose, self.failed, self.goals_done, self.failures = self.pose, [], 0, 0
         self.state = 'verkennen'
         self.get_logger().info(f'Verkennen gestart, kaart "{self.name}"')
         self.publish_status('Verkennen…')
@@ -249,7 +253,7 @@ class Explorer(Node):
             # Doel: de randcel het dichtst bij het midden van de groep.
             r, c = cells[np.argmin(((cells - cells.mean(axis=0)) ** 2).sum(axis=1))]
             x, y = ox + (c + 0.5) * res, oy + (r + 0.5) * res
-            if any(math.dist((x, y), f) < self.p['failed_radius'] for f in self.failed):
+            if self.near_failed(cells, res, ox, oy):
                 continue
             cost = math.dist((x, y), self.pose[:2]) - self.p['size_gain'] * len(group) * res
             if best is None or cost < best[0]:
@@ -267,6 +271,15 @@ class Explorer(Node):
             x, y = sx + (x - sx) * scale, sy + (y - sy) * scale
         if not self.send_goal(x, y):
             self.fail('Nav2 is niet klaar (navigate_to_pose)')
+
+    def near_failed(self, cells, res, ox, oy):
+        """Ligt een cel van deze rand dicht bij een eerder mislukt doel?"""
+        if not self.failed:
+            return False
+        xy = np.column_stack((ox + (cells[:, 1] + 0.5) * res, oy + (cells[:, 0] + 0.5) * res))
+        failed = np.array(self.failed)
+        dist = np.hypot(xy[:, None, 0] - failed[None, :, 0], xy[:, None, 1] - failed[None, :, 1])
+        return bool((dist < self.p['failed_radius']).any())
 
     def frontier_left(self, goal):
         """Is er rond het doel (±10 cm) nog onbekende ruimte naast vrije?"""
@@ -332,6 +345,12 @@ class Explorer(Node):
         if (status == GoalStatus.STATUS_ABORTED or reason == 'vast'
                 or (status == GoalStatus.STATUS_SUCCEEDED and self.frontier_left(goal))):
             self.failed.append(goal)
+            self.failures += 1
+            if self.failures >= self.p['max_failures']:
+                self.finish(f'{self.failures} doelen na elkaar niet bereikbaar: de rest is afgesloten')
+                return
+        else:
+            self.failures = 0
         self.next_goal_at = time.monotonic() + 1.0  # kaart even laten bijwerken
 
     # --- einde ----------------------------------------------------------------------
