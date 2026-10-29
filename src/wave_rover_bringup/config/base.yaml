@@ -8,7 +8,10 @@ esp32_bridge:
     max_wheel_cmd: 0.5
     min_wheel_cmd: 0.1
     min_turn_wheel_cmd: 0.25
-    min_spin_wheel_cmd: 0.17
+    # Was 0.17; met batterijen en speaker (29-10-2026) bleef hij bij ter plaatse draaien
+    # geregeld staan (6 graden/s i.p.v. 66). Gemeten bij 1,2 rad/s gevraagd: 0.25 -> 44-64,
+    # 0.29 -> 71-88 graden/s. Live bij te stellen: ros2 param set /esp32_bridge ...
+    min_spin_wheel_cmd: 0.29
     # Draaicorrectie (gemeten 23-10-2026 met scripts/calibrate_motion.py)
     spin_gain: 1.6
     curve_gain: 0.9

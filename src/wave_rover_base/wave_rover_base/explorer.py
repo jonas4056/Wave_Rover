@@ -170,7 +170,7 @@ class Explorer(Node):
         if self.state not in ('wacht', 'klaar', 'fout') or name == self.pending:
             return  # bezig; het dashboard herhaalt de start tot de status verandert
         if not VALID_NAME.match(name):
-            self.fail('Ongeldige naam: gebruik letters, cijfers, - of _')
+            self.fail(f'Ongeldige naam {name!r}: gebruik letters, cijfers, - of _')
         elif name in self.maps:
             self.fail(f'Er bestaat al een kaart "{name}"; kies een andere naam')
         else:

@@ -18,11 +18,15 @@ import time
 import rclpy
 import serial
 from geometry_msgs.msg import TwistStamped
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, Imu
 
 G = 9.80665
+# Parameters die zonder herstart aangepast kunnen worden (zelfde naam als het attribuut).
+TUNABLE = ('min_wheel_cmd', 'min_turn_wheel_cmd', 'min_spin_wheel_cmd', 'spin_gain',
+           'curve_gain')
 GYRO_BIAS_START = 40  # metingen bij stilstand voor het eerste nulpunt (2 s bij 20 Hz)
 
 
@@ -80,6 +84,7 @@ class Esp32Bridge(Node):
         self.spin_gain = self.get_parameter('spin_gain').value
         self.curve_gain = self.get_parameter('curve_gain').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
+        self.add_on_set_parameters_callback(self.on_parameters)
         self.imu_frame = self.get_parameter('imu_frame').value
         self.gyro_bias_alpha = 1.0 / (self.get_parameter('imu_rate').value
                                       * self.get_parameter('gyro_bias_time').value)
@@ -114,6 +119,14 @@ class Esp32Bridge(Node):
         line = json.dumps(msg, separators=(',', ':')) + '\n'
         with self.write_lock:
             self.ser.write(line.encode())
+
+    def on_parameters(self, params):
+        """Afstelling tijdens het rijden aanpassen (`ros2 param set /esp32_bridge ...`)."""
+        for p in params:
+            if p.name in TUNABLE:
+                setattr(self, p.name, float(p.value))
+                self.get_logger().info(f'{p.name} = {p.value}')
+        return SetParametersResult(successful=True)
 
     def stop_motors(self):
         self.send({'T': 1, 'L': 0, 'R': 0})

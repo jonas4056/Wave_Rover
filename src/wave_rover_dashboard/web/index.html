@@ -90,7 +90,7 @@
       <ul id="maps" class="maps"></ul>
       <form id="map-save" class="map-save">
         <input id="map-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
-               placeholder="naam nieuwe kaart, bv. keuken" pattern="[A-Za-z0-9_-]{1,40}" required>
+               placeholder="naam nieuwe kaart, bv. keuken" pattern="[A-Za-z0-9_\-]{1,40}" required>
         <button type="submit">Opslaan</button>
       </form>
       <p class="hint" id="maps-message">Nieuwe kaart: zet de module <b>slam</b> aan, rijd rustig
@@ -99,7 +99,7 @@
       <h3 class="subhead">Zelf verkennen</h3>
       <form id="explore" class="map-save">
         <input id="explore-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
-               placeholder="naam nieuwe kaart, bv. slaapkamer" pattern="[A-Za-z0-9_-]{1,40}" required>
+               placeholder="naam nieuwe kaart, bv. slaapkamer" pattern="[A-Za-z0-9_\-]{1,40}" required>
         <button type="submit">Verken</button>
       </form>
       <button type="button" id="explore-stop" class="explore-stop" hidden>Stop verkennen</button>
