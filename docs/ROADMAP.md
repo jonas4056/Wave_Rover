@@ -260,6 +260,22 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
       (microfoon + luidspreker) voor spraakbediening
 - [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
 
+**Inspiratie: [Pupper v3](https://pupper-v3-documentation.readthedocs.io/en/latest/)**
+(open-source robothond van Stanford). Hoe zijn AI werkt staat op
+[Using Pupper AI](https://pupper-v3-documentation.readthedocs.io/en/latest/development/ai.html):
+een spraakmodel praat en kiest zelf "tools", die de robotsoftware uitvoert in plaats van ze
+voor te lezen. Ideeën om over te nemen:
+- [ ] Tools voor het taalmodel: `move` (snelheidscommando naar Nav2/twist_mux),
+      `analyze_camera_image` (foto naar het VLM, antwoord terug als context), "rondkijken",
+      naar een locatie met een naam rijden, volume van de speaker (bij Pupper ±10 regels code)
+- [ ] Volgmodus: de dichtstbijzijnde persoon volgen (YOLO `person` + lidar-afstand)
+- [ ] Expressie: een gezicht op een schermpje of in het dashboard, geluidjes; Pupper heeft
+      een scherm en beweegbare oren
+- [ ] Veiligheid rond kinderen ([Safety](https://pupper-v3-documentation.readthedocs.io/en/latest/using_pupper/safety.html))
+- Keuze voor later: Pupper draait spraak, taalmodel en beeld in de cloud (OpenAI Realtime,
+  Cartesia TTS, Google Gemini): snel en slim, maar internet en kosten. Wij mikken eerst op
+  lokaal (Whisper, Piper, een klein VLM op de GPU), eventueel met de cloud als optie.
+
 **Aandachtspunt:** de 8 GB geheugen wordt gedeeld door ROS, Nav2 en de AI-modellen.
 We kiezen kleine, gequantiseerde modellen en meten het geheugengebruik. Blijkt het te
 krap, dan kan het zwaarste model als terugvaloptie op de pc draaien. Die heeft een
