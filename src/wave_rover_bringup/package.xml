@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>wave_rover_base</exec_depend>
+  <exec_depend>wave_rover_base_cpp</exec_depend>
   <exec_depend>wave_rover_rc</exec_depend>
   <exec_depend>wave_rover_description</exec_depend>
   <exec_depend>wave_rover_manager</exec_depend>

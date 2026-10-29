@@ -1,7 +1,8 @@
 """Basis van de Wave Rover: ESP32-bridge, RC-zender, twist_mux, robotmodel, batterijbewaking, module-manager en dashboard."""
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch.substitutions import PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
+from launch.substitutions import EqualsSubstitution, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -16,15 +17,19 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare('wave_rover_description'), 'launch', 'description.launch.py'])
         ),
+        # ESP32-bridge in C++ (wave_rover_base_cpp, ±10x minder CPU); de oude Python-versie
+        # blijft beschikbaar met bridge:=python (command in docker-compose.yml).
+        DeclareLaunchArgument('bridge', default_value='cpp', choices=['cpp', 'python']),
         # Alleen twist_mux mag de motoren aansturen: de bridge luistert naar /cmd_vel_safe.
         # (Sommige Nav2-nodes, zoals de docking_server, publiceren rechtstreeks op /cmd_vel.)
-        Node(
-            package='wave_rover_base',
+        *[Node(
+            package=package,
             executable='esp32_bridge',
             parameters=[config],
             remappings=[('cmd_vel', 'cmd_vel_safe')],
             output='screen',
-        ),
+            condition=IfCondition(EqualsSubstitution(LaunchConfiguration('bridge'), impl)),
+        ) for impl, package in (('cpp', 'wave_rover_base_cpp'), ('python', 'wave_rover_base'))],
         # Enige eigenaar van /e_stop (lock in twist_mux); service /e_stop/set, vrijgeven met RC kanaal 8.
         Node(
             package='wave_rover_base',
