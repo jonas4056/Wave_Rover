@@ -93,6 +93,7 @@ function subscribeAll() {
   if (cameraOn) setCamera(true);  // na herverbinding opnieuw abonneren
   MapView.start(ros);
   MapsCard.start(ros);
+  SceneCard.start(ros);
 }
 
 // --- status -------------------------------------------------------------------------

@@ -372,6 +372,27 @@ button {
 }
 .explore-stop[hidden] { display: none; }
 
+/* Wat zie je? */
+.scene-question {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--card-2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* voorkomt inzoomen op iOS */
+}
+
+.scene-text {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card-2);
+  line-height: 1.4;
+}
+.scene-text[hidden] { display: none; }
+
 /* Afsluiten bij lege batterij */
 .shutdown-banner {
   display: flex;
@@ -400,6 +421,7 @@ button {
 }
 
 .small-btn.active { background: var(--accent); color: #fff; }
+.small-btn:disabled { opacity: 0.5; }
 
 .camera-wrap { position: relative; }
 

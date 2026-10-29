@@ -1,9 +1,41 @@
 # Wave Rover – ROS 2 Jazzy op de Jetson Orin Nano (JetPack 7.2)
+
+# --- llama.cpp met CUDA (module scene: beeldtaalmodel op de GPU) ------------------------
+# Apart gebouwd met de CUDA-compiler; in het eindimage komt alleen llama-server (statisch
+# gelinkt aan llama.cpp, dynamisch aan CUDA/cuBLAS). Vastgezet op een release zodat het image
+# reproduceerbaar is. Compute capability 87 = Orin. Bouwen duurt op de Jetson ±20-40 min;
+# -j 3 zodat nvcc (±1 GB per proces) het geheugen niet opgebruikt naast de draaiende robot.
+FROM ros:jazzy-ros-base AS llama
+ARG DEBIAN_FRONTEND=noninteractive
+ARG L4T=r39.2
+ARG LLAMA_TAG=b11669
+ADD https://repo.download.nvidia.com/jetson/jetson-ota-public.asc /etc/apt/trusted.gpg.d/
+RUN chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc \
+    && echo "deb https://repo.download.nvidia.com/jetson/common $L4T main" \
+        > /etc/apt/sources.list.d/nvidia-jetson.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        cmake \
+        git \
+        cuda-nvcc-13-2 \
+        cuda-cudart-dev-13-2 \
+        cuda-driver-dev-13-2 \
+        libcublas-dev-13-2 \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 -b "$LLAMA_TAG" https://github.com/ggml-org/llama.cpp.git /opt/llama.cpp \
+    && cd /opt/llama.cpp \
+    && cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+        -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=87 \
+        -DCMAKE_CUDA_COMPILER=/usr/local/cuda-13.2/bin/nvcc \
+        -DLLAMA_OPENSSL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
+    && cmake --build build --target llama-server -j 3
+
+# --- Wave Rover ------------------------------------------------------------------------
 FROM ros:jazzy-ros-base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        alsa-utils \
         python3-serial \
         ros-jazzy-demo-nodes-cpp \
         ros-jazzy-demo-nodes-py \
@@ -44,6 +76,7 @@ RUN chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc \
         > /etc/apt/sources.list.d/nvidia-jetson.list \
     && apt-get update && apt-get install -y --no-install-recommends \
         cuda-cudart-13-2 \
+        libcublas-13-2 \
         libnvinfer-bin \
         python3-libnvinfer \
         python3-numpy \
@@ -51,9 +84,16 @@ RUN chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc \
         ros-jazzy-vision-msgs \
     && rm -rf /var/lib/apt/lists/*
 
+# Scènebeschrijving (module scene): llama-server uit de eerste stap, en Piper voor de
+# Vlaamse stem (losse release met eigen onnxruntime en espeak-ng; stemmen in ~/wave_rover/models).
+COPY --from=llama /opt/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server
+ARG PIPER_RELEASE=2023.11.14-2
+ADD https://github.com/rhasspy/piper/releases/download/${PIPER_RELEASE}/piper_linux_aarch64.tar.gz /tmp/piper.tar.gz
+RUN tar -xzf /tmp/piper.tar.gz -C /opt && rm /tmp/piper.tar.gz
+
 # Werk als gewone gebruiker (uid 1000 = jonas op de Jetson), zodat build/ en
 # install/ niet van root worden. Groepen geven toegang tot seriële poorten en camera.
-RUN usermod -aG dialout,video ubuntu
+RUN usermod -aG dialout,video,audio ubuntu
 
 COPY docker/entrypoint.sh /entrypoint.sh
 

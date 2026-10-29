@@ -68,6 +68,18 @@
 
     <section class="card">
       <div class="card-head">
+        <h2>Wat zie je?</h2>
+        <button type="button" id="scene-ask" class="small-btn">Vertel</button>
+      </div>
+      <input id="scene-question" class="scene-question" type="text" autocomplete="off"
+             placeholder="optioneel een vraag, bv. welke kleur heeft de bal?">
+      <p id="scene-text" class="scene-text" hidden></p>
+      <p class="hint" id="scene-status">Tik op "Vertel": de robot neemt een foto en zegt via de
+        speaker wat hij ziet. De eerste keer laadt hij het taalmodel (module scene, ±20 s).</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
         <h2>Kaart</h2>
         <span id="nav-status" class="nav-status">geen kaart</span>
       </div>
@@ -134,6 +146,7 @@
   <script src="roslib.min.js"></script>
   <script src="map.js"></script>
   <script src="maps.js"></script>
+  <script src="scene.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

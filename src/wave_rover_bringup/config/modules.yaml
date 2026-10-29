@@ -54,6 +54,11 @@ modules:
     package: wave_rover_bringup
     launch: floor_obstacles.launch.py
     requires: [camera]
+  scene:
+    description: Vertelt wat de camera ziet (beeldtaalmodel op de GPU, ±2 GB) via de speaker
+    package: wave_rover_bringup
+    launch: scene.launch.py
+    requires: [camera]
   voice:
     description: Yahboom-spraakmodule (commando's, batterijmeldingen, noodstop)
     package: wave_rover_bringup

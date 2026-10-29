@@ -1,0 +1,8 @@
+# Niet meesturen naar docker build: grote of lokale mappen op de Jetson.
+build
+install
+log
+maps
+models
+run
+.git
