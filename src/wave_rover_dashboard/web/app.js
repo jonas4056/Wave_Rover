@@ -231,8 +231,30 @@ function startCamera() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && cameraOn) setCamera(false);
-  else if (!document.hidden && openPanel === 'camera' && !cameraOn) startCamera();
+  else if (!document.hidden) updateCamera();
 });
+
+// Eén camerabeeld (één videostroom): in het camerapaneel, of klein over de kaart zolang het
+// rijpaneel open is (knop "Camera" daar; de keuze wordt onthouden). Anders uit.
+let driveCamera = true;
+try { driveCamera = localStorage.getItem('driveCamera') !== 'uit'; } catch (e) { /* privé */ }
+
+function updateCamera() {
+  const inPip = openPanel === 'drive' && driveCamera;
+  const wanted = openPanel === 'camera' || inPip;
+  $(inPip ? 'camera-pip' : 'camera-slot').append($('camera-wrap'));
+  $('camera-pip').hidden = !inPip;
+  $('drive-camera').classList.toggle('active', driveCamera);
+  if (wanted && !cameraOn) startCamera();
+  if (!wanted && cameraOn) setCamera(false);
+}
+
+$('drive-camera').addEventListener('click', () => {
+  driveCamera = !driveCamera;
+  try { localStorage.setItem('driveCamera', driveCamera ? 'aan' : 'uit'); } catch (e) { /* privé */ }
+  updateCamera();
+});
+$('camera-pip').addEventListener('click', () => $('camera-pip').classList.toggle('large'));
 
 // --- panelen ------------------------------------------------------------------------
 
@@ -254,8 +276,7 @@ function showPanel(name) {
     $('sheet-title').textContent = document.querySelector(`.panel[data-panel="${openPanel}"]`).dataset.title;
   }
   if (previous === 'drive' && openPanel !== 'drive') stopDriving();
-  if (previous === 'camera' && openPanel !== 'camera') setCamera(false);
-  if (openPanel === 'camera' && previous !== 'camera') startCamera();
+  updateCamera();
 }
 
 document.querySelectorAll('.tabbar [data-tab]').forEach((b) => {

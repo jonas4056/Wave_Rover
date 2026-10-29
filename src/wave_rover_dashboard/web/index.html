@@ -67,6 +67,8 @@
         <span>Laadkabel in: rijden geblokkeerd</span>
       </div>
       <div id="nav-status" class="nav-status">geen kaart</div>
+      <!-- Camerabeeld klein over de kaart tijdens het rijden; tik = groter/kleiner -->
+      <div id="camera-pip" class="camera-pip" hidden></div>
     </div>
 
     <div class="map-tools" role="group" aria-label="Kaart">
@@ -88,16 +90,21 @@
       <div class="sheet-body">
 
         <div class="panel" data-panel="drive" data-title="Rijden" hidden>
-          <div class="speed" role="group" aria-label="Snelheid">
-            <button type="button" data-speed="0" class="active">1</button>
-            <button type="button" data-speed="1">2</button>
-            <button type="button" data-speed="2">3</button>
+          <div class="drive-row">
+            <div id="joystick" class="joystick" aria-label="Joystick">
+              <div id="knob" class="knob"></div>
+            </div>
+            <div class="drive-side">
+              <div class="speed" role="group" aria-label="Snelheid">
+                <button type="button" data-speed="0" class="active">1</button>
+                <button type="button" data-speed="1">2</button>
+                <button type="button" data-speed="2">3</button>
+              </div>
+              <button type="button" id="drive-camera" class="toggle"><svg class="icon"><use href="#i-camera"/></svg><span>Camera</span></button>
+            </div>
           </div>
-          <div id="joystick" class="joystick" aria-label="Joystick">
-            <div id="knob" class="knob"></div>
-          </div>
-          <p class="hint">Houd je vinger op de joystick om te rijden. Loslaten = stoppen.
-            De RC-zender heeft altijd voorrang.</p>
+          <p class="hint">Vinger op de joystick = rijden, loslaten = stoppen. De RC-zender heeft
+            altijd voorrang.</p>
         </div>
 
         <div class="panel" data-panel="maps" data-title="Kaarten" hidden>
@@ -123,11 +130,13 @@
         </div>
 
         <div class="panel" data-panel="camera" data-title="Camera" hidden>
-          <div class="camera-wrap">
-            <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
-            <canvas id="camera-overlay" class="camera-overlay"></canvas>
+          <div id="camera-slot">
+            <div id="camera-wrap" class="camera-wrap">
+              <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
+              <canvas id="camera-overlay" class="camera-overlay"></canvas>
+              <div id="camera-hint" class="camera-hint">Camera start…</div>
+            </div>
           </div>
-          <p class="hint" id="camera-hint">Camera start…</p>
           <p class="hint">Met de module detection aan verschijnen kaders rond herkende objecten.</p>
         </div>
 

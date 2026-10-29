@@ -380,16 +380,28 @@ button {
   font-weight: 600;
 }
 
-/* Rijden */
+/* Rijden: joystick links, snelheid en camera ernaast; zo blijft de kaart zichtbaar */
+.drive-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.drive-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .speed {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
 }
 
 .speed button {
-  flex: 1;
-  padding: 10px;
+  width: 44px;
+  padding: 10px 0;
   border-radius: 10px;
   background: var(--card-2);
   font-weight: 700;
@@ -397,9 +409,25 @@ button {
 
 .speed button.active { background: var(--accent); color: #fff; }
 
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--card-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.toggle.active { background: var(--accent); color: #fff; }
+.toggle .icon { width: 18px; height: 18px; }
+
 .joystick {
   position: relative;
-  width: min(230px, 60vw, 32vh);
+  flex: none;
+  width: min(190px, 46vw, 26vh);
   aspect-ratio: 1;
   margin: 0 auto;
   border-radius: 50%;
@@ -549,8 +577,31 @@ button {
   line-height: 1.4;
 }
 
-/* Camera */
+/* Camera: in het camerapaneel, of klein over de kaart (camera-pip) tijdens het rijden */
 .camera-wrap { position: relative; }
+
+.camera-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background: #121821;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.camera-pip {
+  width: min(46vw, 240px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition: width 0.2s;
+}
+
+.camera-pip.large { width: min(calc(100vw - 96px), 640px); }
+.camera-pip .camera-image,
+.camera-pip .camera-hint { border-radius: 0; }
 
 .camera-overlay {
   position: absolute;

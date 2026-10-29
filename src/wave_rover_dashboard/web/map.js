@@ -167,7 +167,15 @@ const MapView = (() => {
     ctx.fillStyle = '#121821';
     ctx.fillRect(0, 0, w, h);
 
-    if (mapImage) {
+    if (!mapImage) {
+      ctx.fillStyle = '#8a97a8';
+      ctx.font = '600 15px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Geen kaart', w / 2, h / 2 - 10);
+      ctx.font = '13px -apple-system, sans-serif';
+      ctx.fillText('Zet navigation aan bij Modules', w / 2, h / 2 + 12);
+      ctx.textAlign = 'start';
+    } else {
       const topLeft = worldToScreen(mapInfo.ox, mapInfo.oy + mapInfo.height * mapInfo.resolution);
       const span = mapInfo.resolution * view.scale;
       ctx.imageSmoothingEnabled = false;
