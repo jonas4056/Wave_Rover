@@ -6,6 +6,7 @@ const MapView = (() => {
   const canvas = document.getElementById('map');
   const ctx = canvas.getContext('2d');
   const statusEl = document.getElementById('nav-status');
+  const hintEl = document.getElementById('map-hint');
 
   // Kleuren (donker thema): onbekend, vrij, bezet.
   const COLOR_UNKNOWN = [43, 55, 73];
@@ -239,11 +240,18 @@ const MapView = (() => {
     setMode('pan');
   }
 
+  const HINTS = {
+    goal: 'Tik op de kaart waar hij heen moet; sleep voor de richting.',
+    initial: 'Tik waar de robot staat; sleep in de richting waarin hij kijkt.',
+  };
+
   function setMode(newMode) {
     mode = newMode;
     document.querySelectorAll('.map-tools [data-mode]').forEach((b) => {
       b.classList.toggle('active', b.dataset.mode === mode);
     });
+    hintEl.textContent = HINTS[mode] || '';
+    hintEl.hidden = !HINTS[mode];
   }
 
   document.querySelectorAll('.map-tools [data-mode]').forEach((b) => {
@@ -335,7 +343,8 @@ const MapView = (() => {
   });
 
   ['pointerup', 'pointercancel'].forEach((type) => canvas.addEventListener(type, endPointer));
-  window.addEventListener('resize', () => { dirty = true; });
+  // Ook als het paneel ernaast opengaat (iPad liggend) of de werkbalk van Safari verdwijnt.
+  new ResizeObserver(() => { dirty = true; }).observe(canvas);
 
   // --- verbinding -------------------------------------------------------------------
 

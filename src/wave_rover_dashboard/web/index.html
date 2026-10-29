@@ -7,141 +7,157 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Wave Rover">
-  <meta name="theme-color" content="#18202c">
+  <meta name="theme-color" content="#222c3b">
   <title>Wave Rover</title>
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" href="favicon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>Wave Rover</h1>
+  <!-- Pictogrammen (eenvoudige lijnen, kleur = tekstkleur) -->
+  <svg hidden>
+    <symbol id="i-drive" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></symbol>
+    <symbol id="i-maps" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-scene" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></symbol>
+    <symbol id="i-modules" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4h11l-2.5 4.5L17 13H6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  </svg>
+
+  <!-- Altijd zichtbaar: verbinding, batterijen, RC en de noodstop -->
+  <header class="topbar">
     <div id="connection" class="badge offline" role="status">niet verbonden</div>
+    <div class="chips">
+      <div class="chip">
+        <span class="chip-label">Jetson <span id="bat-ups-sub"></span></span>
+        <b id="bat-ups" class="stat-value">–</b>
+      </div>
+      <div class="chip">
+        <span class="chip-label">Chassis <span id="bat-chassis-sub"></span></span>
+        <b id="bat-chassis" class="stat-value">–</b>
+      </div>
+      <div class="chip">
+        <span class="chip-label">RC</span>
+        <b id="rc" class="stat-value">–</b>
+      </div>
+    </div>
+    <button id="estop" class="estop" type="button">STOP</button>
   </header>
 
-  <main>
-    <div id="shutdown-banner" class="shutdown-banner" role="alert" hidden>
-      <strong>Batterij Jetson bijna leeg</strong>
-      <span>Afsluiten over <b id="shutdown-seconds">60</b> s. Steek de adapter in om te annuleren.</span>
+  <!-- De kaart vult de rest van het scherm; panelen schuiven erover -->
+  <main class="map-area">
+    <canvas id="map"></canvas>
+
+    <div class="map-top">
+      <div id="shutdown-banner" class="banner shutdown-banner" role="alert" hidden>
+        <strong>Batterij Jetson bijna leeg</strong>
+        <span>Afsluiten over <b id="shutdown-seconds">60</b> s. Steek de adapter in om te annuleren.</span>
+      </div>
+      <div id="estop-state" class="banner estop-state" hidden>
+        <span>Noodstop actief</span>
+        <button id="estop-release" type="button">Vrijgeven</button>
+      </div>
+      <div id="charging-state" class="banner estop-state" hidden>
+        <span>Laadkabel in: rijden geblokkeerd</span>
+      </div>
+      <div id="nav-status" class="nav-status">geen kaart</div>
     </div>
-    <button id="estop" class="estop" type="button">NOODSTOP</button>
-    <div id="estop-state" class="estop-state" hidden>
-      <span>Noodstop actief</span>
-      <button id="estop-release" type="button">Vrijgeven</button>
+
+    <div class="map-tools" role="group" aria-label="Kaart">
+      <button type="button" data-mode="pan" class="active"><svg class="icon"><use href="#i-move"/></svg><span>Kaart</span></button>
+      <button type="button" data-mode="goal"><svg class="icon"><use href="#i-flag"/></svg><span>Doel</span></button>
+      <button type="button" data-mode="initial"><svg class="icon"><use href="#i-pin"/></svg><span>Start</span></button>
+      <button type="button" id="nav-find"><svg class="icon"><use href="#i-locate"/></svg><span>Zoek mij</span></button>
+      <button type="button" id="nav-cancel" class="danger"><svg class="icon"><use href="#i-stop"/></svg><span>Stop rit</span></button>
+      <button type="button" id="map-fit"><svg class="icon"><use href="#i-fit"/></svg><span>Passend</span></button>
     </div>
-    <div id="charging-state" class="estop-state" hidden>
-      <span>Laadkabel in: rijden geblokkeerd</span>
-    </div>
+    <div id="map-hint" class="map-hint" hidden></div>
 
-    <section class="card">
-      <h2>Status</h2>
-      <div class="status-grid">
-        <div class="stat">
-          <div class="stat-label">Jetson</div>
-          <div class="stat-value" id="bat-ups">–</div>
-          <div class="stat-sub" id="bat-ups-sub"></div>
+    <section id="sheet" class="sheet" aria-live="polite">
+      <div class="sheet-head" id="sheet-head">
+        <div class="sheet-grip"></div>
+        <h2 id="sheet-title"></h2>
+        <button type="button" id="sheet-close" class="sheet-close" aria-label="Sluiten"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="sheet-body">
+
+        <div class="panel" data-panel="drive" data-title="Rijden" hidden>
+          <div class="speed" role="group" aria-label="Snelheid">
+            <button type="button" data-speed="0" class="active">1</button>
+            <button type="button" data-speed="1">2</button>
+            <button type="button" data-speed="2">3</button>
+          </div>
+          <div id="joystick" class="joystick" aria-label="Joystick">
+            <div id="knob" class="knob"></div>
+          </div>
+          <p class="hint">Houd je vinger op de joystick om te rijden. Loslaten = stoppen.
+            De RC-zender heeft altijd voorrang.</p>
         </div>
-        <div class="stat">
-          <div class="stat-label">Chassis</div>
-          <div class="stat-value" id="bat-chassis">–</div>
-          <div class="stat-sub" id="bat-chassis-sub"></div>
+
+        <div class="panel" data-panel="maps" data-title="Kaarten" hidden>
+          <ul id="maps" class="maps"></ul>
+          <form id="map-save" class="map-save">
+            <input id="map-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
+                   placeholder="naam nieuwe kaart, bv. keuken" pattern="[A-Za-z0-9_\-]{1,40}" required>
+            <button type="submit">Opslaan</button>
+          </form>
+          <p class="hint" id="maps-message">Nieuwe kaart: zet de module <b>slam</b> aan, rijd rustig
+            rond met de joystick (stand 1) en sla de kaart op. Kies ze daarna met "gebruik" en zet
+            de module <b>navigation</b> aan.</p>
+          <h3 class="subhead">Zelf verkennen</h3>
+          <form id="explore" class="map-save">
+            <input id="explore-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
+                   placeholder="naam nieuwe kaart, bv. slaapkamer" pattern="[A-Za-z0-9_\-]{1,40}" required>
+            <button type="submit">Verken</button>
+          </form>
+          <button type="button" id="explore-stop" class="explore-stop" hidden>Stop verkennen</button>
+          <p class="hint" id="explore-status">Zet de robot in de nieuwe ruimte en tik op Verken. Hij
+            rijdt zelf rond tot alles verkend is, rijdt terug naar het startpunt en bewaart de kaart.
+            Je RC-zender en de noodstop hebben altijd voorrang.</p>
         </div>
-        <div class="stat">
-          <div class="stat-label">RC-zender</div>
-          <div class="stat-value" id="rc">–</div>
+
+        <div class="panel" data-panel="camera" data-title="Camera" hidden>
+          <div class="camera-wrap">
+            <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
+            <canvas id="camera-overlay" class="camera-overlay"></canvas>
+          </div>
+          <p class="hint" id="camera-hint">Camera start…</p>
+          <p class="hint">Met de module detection aan verschijnen kaders rond herkende objecten.</p>
         </div>
-      </div>
-    </section>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>Camera</h2>
-        <button type="button" id="camera-toggle" class="small-btn">Toon beeld</button>
-      </div>
-      <div class="camera-wrap">
-        <img id="camera-image" class="camera-image" alt="Camerabeeld" hidden>
-        <canvas id="camera-overlay" class="camera-overlay"></canvas>
-      </div>
-      <p class="hint" id="camera-hint">Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.
-        Met de module detection aan verschijnen kaders rond herkende objecten.</p>
-    </section>
+        <div class="panel" data-panel="scene" data-title="Wat zie je?" hidden>
+          <div class="map-save">
+            <input id="scene-question" class="scene-question" type="text" autocomplete="off"
+                   placeholder="optioneel een vraag, bv. welke kleur heeft de bal?">
+            <button type="button" id="scene-ask">Vertel</button>
+          </div>
+          <p id="scene-text" class="scene-text" hidden></p>
+          <p class="hint" id="scene-status">Tik op "Vertel": de robot neemt een foto en zegt via de
+            speaker wat hij ziet. De eerste keer laadt hij het taalmodel (module scene, ±20 s).</p>
+        </div>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>Wat zie je?</h2>
-        <button type="button" id="scene-ask" class="small-btn">Vertel</button>
-      </div>
-      <input id="scene-question" class="scene-question" type="text" autocomplete="off"
-             placeholder="optioneel een vraag, bv. welke kleur heeft de bal?">
-      <p id="scene-text" class="scene-text" hidden></p>
-      <p class="hint" id="scene-status">Tik op "Vertel": de robot neemt een foto en zegt via de
-        speaker wat hij ziet. De eerste keer laadt hij het taalmodel (module scene, ±20 s).</p>
-    </section>
+        <div class="panel" data-panel="modules" data-title="Modules" hidden>
+          <ul id="modules" class="modules"></ul>
+        </div>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>Kaart</h2>
-        <span id="nav-status" class="nav-status">geen kaart</span>
       </div>
-      <div class="map-tools" role="group" aria-label="Kaartmodus">
-        <button type="button" data-mode="pan" class="active">Verplaats</button>
-        <button type="button" data-mode="goal">Doel</button>
-        <button type="button" data-mode="initial">Startpositie</button>
-        <button type="button" id="nav-cancel" class="danger">Stop</button>
-        <button type="button" id="nav-find" class="wide">Zoek mezelf op de kaart</button>
-      </div>
-      <div class="map-wrap">
-        <canvas id="map"></canvas>
-        <button type="button" id="map-fit" class="map-fit" aria-label="Kaart passend maken">⤢</button>
-      </div>
-      <p class="hint" id="map-hint">Eén vinger verschuift, twee vingers zoomen.
-        Kies "Doel" of "Startpositie" en tik op de kaart; sleep voor de richting. Weet de robot
-        niet waar hij staat (verplaatst terwijl hij uit stond)? Tik "Zoek mezelf".
-        Oranje = lidar, rood = camera (lage obstakels).</p>
-    </section>
-
-    <section class="card">
-      <h2>Kaarten</h2>
-      <ul id="maps" class="maps"></ul>
-      <form id="map-save" class="map-save">
-        <input id="map-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
-               placeholder="naam nieuwe kaart, bv. keuken" pattern="[A-Za-z0-9_\-]{1,40}" required>
-        <button type="submit">Opslaan</button>
-      </form>
-      <p class="hint" id="maps-message">Nieuwe kaart: zet de module <b>slam</b> aan, rijd rustig
-        rond met de joystick (stand 1) en sla de kaart op. Kies ze daarna met "gebruik" en zet
-        de module <b>navigation</b> aan.</p>
-      <h3 class="subhead">Zelf verkennen</h3>
-      <form id="explore" class="map-save">
-        <input id="explore-name" type="text" inputmode="text" autocapitalize="off" autocomplete="off"
-               placeholder="naam nieuwe kaart, bv. slaapkamer" pattern="[A-Za-z0-9_\-]{1,40}" required>
-        <button type="submit">Verken</button>
-      </form>
-      <button type="button" id="explore-stop" class="explore-stop" hidden>Stop verkennen</button>
-      <p class="hint" id="explore-status">Zet de robot in de nieuwe ruimte en tik op Verken. Hij
-        rijdt zelf rond tot alles verkend is, rijdt terug naar het startpunt en bewaart de kaart.
-        Je RC-zender en de noodstop hebben altijd voorrang.</p>
-    </section>
-
-    <section class="card">
-      <h2>Rijden</h2>
-      <div class="speed" role="group" aria-label="Snelheid">
-        <button type="button" data-speed="0" class="active">1</button>
-        <button type="button" data-speed="1">2</button>
-        <button type="button" data-speed="2">3</button>
-      </div>
-      <div id="joystick" class="joystick" aria-label="Joystick">
-        <div id="knob" class="knob"></div>
-      </div>
-      <p class="hint">Houd je vinger op de joystick om te rijden. Loslaten = stoppen.
-        De RC-zender heeft altijd voorrang.</p>
-    </section>
-
-    <section class="card">
-      <h2>Modules</h2>
-      <ul id="modules" class="modules"></ul>
     </section>
   </main>
+
+  <!-- Knoppen onderaan: elk opent een paneel over de kaart (nog eens tikken = sluiten) -->
+  <nav class="tabbar" aria-label="Functies">
+    <button type="button" data-tab="drive"><svg class="icon"><use href="#i-drive"/></svg><span>Rijden</span></button>
+    <button type="button" data-tab="maps"><svg class="icon"><use href="#i-maps"/></svg><span>Kaarten</span></button>
+    <button type="button" data-tab="camera"><svg class="icon"><use href="#i-camera"/></svg><span>Camera</span></button>
+    <button type="button" data-tab="scene"><svg class="icon"><use href="#i-scene"/></svg><span>Vertel</span></button>
+    <button type="button" data-tab="modules"><svg class="icon"><use href="#i-modules"/></svg><span>Modules</span></button>
+  </nav>
 
   <script src="roslib.min.js"></script>
   <script src="map.js"></script>

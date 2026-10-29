@@ -134,7 +134,6 @@ function showRc(isConnected) {
 function showShutdown(seconds) {
   $('shutdown-banner').hidden = seconds < 0;
   $('shutdown-seconds').textContent = seconds;
-  if (seconds >= 0) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // --- camera -------------------------------------------------------------------------
@@ -148,7 +147,6 @@ const CAMERA_STREAM = `http://${window.location.hostname}:8081/stream.mjpg?fps=1
 let cameraOn = false;
 let detectionsTopic = null;
 let detectionsClear = null;
-const CAMERA_HINT = 'Tik op "Toon beeld"; de module camera gaat dan vanzelf aan.';
 const CAMERA_SIZE = { w: 1280, h: 720 };  // kaders in /detections zijn in deze pixels
 
 function showCameraImage() {
@@ -163,15 +161,12 @@ $('camera-image').addEventListener('error', () => {
 });
 
 function setCamera(on) {
-  const btn = $('camera-toggle');
-  btn.classList.toggle('active', on);
-  btn.textContent = on ? 'Verberg beeld' : 'Toon beeld';
   const img = $('camera-image');
   img.hidden = true;  // pas tonen bij het eerste nieuwe beeld, niet het oude van vorige keer
   cameraOn = false;  // eerst: het sluiten van de stroom mag geen herverbinding starten
   img.src = '';
   img.removeAttribute('src');
-  $('camera-hint').textContent = on ? 'Camera start…' : CAMERA_HINT;
+  $('camera-hint').textContent = 'Camera start…';
   $('camera-hint').hidden = false;
   cameraOn = on;
   if (detectionsTopic) {
@@ -226,18 +221,54 @@ function drawDetections(detections) {
   }
 }
 
-$('camera-toggle').addEventListener('click', () => {
-  const on = !cameraOn;
-  // De module camera gaat mee aan (uitzetten doe je bij de modules).
-  // Elke andere toestand dan aan/start (uit, fout of nog onbekend): aanzetten.
+// Beeld tonen zolang het camerapaneel open is. De module camera gaat mee aan (uitzetten doe
+// je bij de modules); elke andere toestand dan aan/start (uit, fout of onbekend): aanzetten.
+function startCamera() {
   const state = lastModules.camera && lastModules.camera.state;
-  if (on && state !== 'aan' && state !== 'start') {
-    callEnable('camera', true);
-  }
-  setCamera(on);
-});
+  if (state !== 'aan' && state !== 'start') callEnable('camera', true);
+  setCamera(true);
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && cameraOn) setCamera(false);
+  else if (!document.hidden && openPanel === 'camera' && !cameraOn) startCamera();
+});
+
+// --- panelen ------------------------------------------------------------------------
+
+// De kaart vult het scherm; elke knop onderaan schuift een paneel over de kaart. Nog eens
+// tikken, het kruisje of omlaag vegen sluit het. Rijden en camerabeeld lopen alleen zolang
+// hun paneel open is.
+let openPanel = null;
+
+function showPanel(name) {
+  const previous = openPanel;
+  openPanel = name === openPanel ? null : name;
+  $('sheet').classList.toggle('open', openPanel !== null);
+  document.querySelectorAll('.tabbar [data-tab]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.tab === openPanel);
+  });
+  if (openPanel) {
+    // Bij sluiten blijft de inhoud staan tot het paneel weggeschoven is.
+    document.querySelectorAll('.panel').forEach((p) => { p.hidden = p.dataset.panel !== openPanel; });
+    $('sheet-title').textContent = document.querySelector(`.panel[data-panel="${openPanel}"]`).dataset.title;
+  }
+  if (previous === 'drive' && openPanel !== 'drive') stopDriving();
+  if (previous === 'camera' && openPanel !== 'camera') setCamera(false);
+  if (openPanel === 'camera' && previous !== 'camera') startCamera();
+}
+
+document.querySelectorAll('.tabbar [data-tab]').forEach((b) => {
+  b.addEventListener('click', () => showPanel(b.dataset.tab));
+});
+$('sheet-close').addEventListener('click', () => showPanel(null));
+
+// Omlaag vegen aan de kop van het paneel sluit het.
+let sheetSwipe = null;
+$('sheet-head').addEventListener('pointerdown', (event) => { sheetSwipe = event.clientY; });
+$('sheet-head').addEventListener('pointerup', (event) => {
+  if (sheetSwipe !== null && event.clientY - sheetSwipe > 40) showPanel(null);
+  sheetSwipe = null;
 });
 
 // --- noodstop -----------------------------------------------------------------------
