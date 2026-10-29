@@ -15,6 +15,7 @@
 # en pendelt hij heen en weer.
 # AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
 # volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
+
 amcl:
   ros__parameters:
     alpha1: 0.4

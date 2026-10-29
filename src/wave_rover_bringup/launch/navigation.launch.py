@@ -20,11 +20,11 @@ import json
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, EmitEvent, IncludeLaunchDescription, \
-    OpaqueFunction, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, EmitEvent, GroupAction, \
+    IncludeLaunchDescription, OpaqueFunction, RegisterEventHandler
 from launch.events import matches_action
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import LifecycleNode, Node
+from launch_ros.actions import LifecycleNode, Node, SetParameter
 from launch_ros.event_handlers import OnStateTransition
 from launch_ros.events.lifecycle import ChangeState
 from launch_ros.substitutions import FindPackageShare
@@ -99,17 +99,26 @@ def generate_launch_description():
             parameters=[nav2_params, {'autostart': True}],
             output='screen',
         ),
-        IncludeLaunchDescription(
-            PathJoinSubstitution(
-                [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']),
-            launch_arguments={
-                'params_file': nav2_params,
-                'use_sim_time': 'false',
-                'autostart': 'true',
-                'use_composition': 'True',
-                'container_name': 'nav2_container',
-            }.items(),
-        ),
+        # Bond (hartslag tussen de lifecycle-manager en elke server) uit: 10 servers x 10 Hz
+        # op één gedeeld topic dat elke server ontvangt, 200 berichten/s x 20 ontvangers =
+        # ~0,5 kern bij stilstand (gemeten 29-10-2026). Alles draait in één proces: crasht een
+        # server, dan valt het hele proces weg en ziet de module-manager dat. Via SetParameter,
+        # want de lifecycle-manager krijgt nav2.yaml niet mee.
+        GroupAction([
+            SetParameter('bond_heartbeat_period', 0.0),
+            SetParameter('bond_timeout', 0.0),
+            IncludeLaunchDescription(
+                PathJoinSubstitution(
+                    [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']),
+                launch_arguments={
+                    'params_file': nav2_params,
+                    'use_sim_time': 'false',
+                    'autostart': 'true',
+                    'use_composition': 'True',
+                    'container_name': 'nav2_container',
+                }.items(),
+            ),
+        ]),
         Node(
             package='wave_rover_base',
             executable='initialpose_relay',
