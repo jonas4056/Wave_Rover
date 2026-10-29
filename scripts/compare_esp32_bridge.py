@@ -137,8 +137,10 @@ def cpu_seconds(pid):
 def run(name, command):
     """Eén versie testen; geeft een dict met alles wat vergeleken wordt."""
     fake = FakeEsp32()
+    # Eigen procesgroep: het stopsignaal moet ook de node bereiken als `ros2 run` ertussen zit.
     proc = subprocess.Popen(shlex.split(command) + ['--ros-args', '-p', f'port:={fake.port}'],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                            start_new_session=True)
     node = rclpy.create_node(f'compare_{name}')
     imu, battery = [], []
     node.create_subscription(Imu, 'imu/data_raw', imu.append, qos_profile_sensor_data)
@@ -245,13 +247,13 @@ def run(name, command):
 
         # Afsluiten: motoren moeten een laatste stop krijgen.
         before = time.monotonic()
-        proc.send_signal(signal.SIGINT)
+        os.killpg(proc.pid, signal.SIGINT)
         proc.wait(timeout=10)
         time.sleep(0.2)
         result['afsluiten'] = [line for _, line in fake.wheel_lines(before)]
     finally:
         if proc.poll() is None:
-            proc.kill()
+            os.killpg(proc.pid, signal.SIGKILL)
         output = proc.communicate()[0]
         node.destroy_node()
         fake.close()

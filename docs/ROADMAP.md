@@ -104,13 +104,17 @@ bij de fase tussen haakjes; is een idee klaar, vink het dan hier en daar af.
       weerstand), eerst de weerstand meten
 
 **Pupper-inspiratie** (fase 6)
-- [ ] (M) Spraak uit: Piper TTS op de USB-luidspreker (batterijmeldingen, "ik ben er")
+- [ ] (M) Spraak uit: Piper TTS op de USB-luidspreker (batterijmeldingen, "ik ben er").
+      Piper en de Vlaamse stemmen staan er sinds 29-10-2026 (module scene)
 - [ ] (S-M) Expressie: geluidjes of een gezichtje in het dashboard
 - [ ] (M) Volgmodus: de dichtstbijzijnde persoon volgen (YOLO `person` + lidar-afstand)
 - [ ] (L) Taalmodel met tools: rijden, een foto beschrijven, naar een locatie rijden
 
 **Beeld** (fase 4)
-- [ ] (M) Beeldtaalmodel (VLM) dat beschrijft wat de camera ziet
+- [ ] (M) Beeldtaalmodel (VLM) dat beschrijft wat de camera ziet: module scene, knop "Wat zie
+      je?" in de app (29-10-2026, in test; zie fase 6)
+- [ ] (S-M) Live vertellen wat er beweegt ("ik zie een bal van links naar rechts rollen"):
+      YOLO-detecties over meerdere beelden volgen; een VLM per beeld is daarvoor te traag
 - [ ] (M) Herkende objecten op de kaart aanduiden (richting uit het beeld + lidar-afstand)
 - [ ] (M) Open woordenschat (YOLOE / YOLO-World): zoeken naar willekeurige woorden
 - [ ] (S) Kleurzweem (paars beeld) uitzoeken
@@ -276,7 +280,11 @@ Te controleren:
 - [x] Nav2 met `use_composition` (één proces i.p.v. ±12)
 - [x] RC: `/joy` aan 50 Hz i.p.v. elk CRSF-pakket (150 Hz). Daarbij gevonden: de UART werd
       per 256 bytes gelezen, waardoor pakketten per ~7 en tot 50 ms te laat kwamen; nu direct
-- [ ] Zware Python-nodes (esp32_bridge, lidar_odom_fix) eventueel naar C++
+- [x] esp32_bridge naar C++ (29-10-2026, `wave_rover_base_cpp`): in rust 9,4% -> 0,8% van een
+      kern op de Jetson. Gedrag vergeleken met `scripts/compare_esp32_bridge.py` (nagebootste
+      ESP32: 81 snelheden letterlijk gelijk, IMU, timeout, gyroregeling). Oorzaak was vooral
+      pyserial `readline()` (leest byte per byte). Terug naar Python: `bridge:=python`
+- [ ] lidar_odom_fix eventueel naar C++
 - [ ] pose_saver naar C++: TF ontvangen (40 berichten/s) kost in Python alleen al ~6% van
       een kern; met de obstakels voor het dashboard samen ~13% (gemeten 28-10-2026)
 - [x] Gemeten (28-10-2026, navigatie aan, stilstaand): CPU 1,78 -> 1,11 kernen, geheugen ROS 2049 -> 1584 MB,
@@ -337,6 +345,11 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
   rondkijken, een foto beschrijven) → spraak (Piper TTS)
 - [ ] Een beeldtaalmodel (VLM) beschrijft wat de camera ziet en zegt het luidop (voorkeur van
       Jonas boven een open-woordenschat-detector; niet realtime is oké)
+- [ ] **Module scene** (29-10-2026, in test): knop "Wat zie je?" in de app -> één camerabeeld ->
+      beeldtaalmodel op de GPU (llama.cpp `llama-server` met CUDA, in het image gebouwd;
+      Qwen3-VL-2B, of Gemma 3 4B met `model:=gemma3-4b`) -> Nederlandse beschrijving in de app en
+      via Piper (Vlaamse stem) op de USB-speaker. Modellen: `scripts/download_scene_models.sh`.
+      Kost niets zolang niemand iets vraagt; met de module aan ±2 GB RAM
 - [ ] Spraak uit: USB-luidspreker (eerst zonder microfoon) + Piper TTS; later een Jabra
       (microfoon + luidspreker) voor spraakbediening
 - [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
