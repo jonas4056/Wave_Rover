@@ -220,8 +220,9 @@ Te controleren:
 - **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
   warm. 29-10-2026, halfleeg na gebruik en 15 min rust: 3,98 / 3,99 / 3,95 V (verschil
   0,04 V = goed). Daarna apart volgeladen in de externe lader (= weer gelijk).
-  Nog doen: vol een dag laten rusten en meten. Boven ~4,1 V = waarschijnlijk
-  oké; duidelijk lager = vervangen.
+  29-10-2026 14u, uit de lader, voor het terugplaatsen: 4,2 / 4,2 / 4,2 V (pas een paar uur
+  rust, dus nog geen echte zelfontladingstest). Nog doen: na gebruik en 15 min rust de
+  cellen opnieuw meten; blijft de zwakke cel duidelijk achter (> 0,05 V) = vervangen.
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
 ### Openstaand (stand 21-10-2026)
