@@ -8,6 +8,8 @@ hebben we hem.
 Werkwijze: we bouwen fase per fase. Een fase is pas klaar als alle punten onder
 **"Klaar wanneer"** werken. Pas dan beginnen we aan de volgende.
 
+Iets kleins tussendoor? Zie [Ideeën voor tussendoor](#ideeën-voor-tussendoor-nice-to-have).
+
 ---
 
 ## Hardware
@@ -80,6 +82,40 @@ Een schakelaar op de TX16S dient als noodstop of als overname van de besturing.
 - Op de iPhone of iPad open je die in Safari en zet je hem met "Zet op beginscherm" als icoon op het beginscherm.
 - Je hebt geen Mac, Xcode of Apple-ontwikkelaarsaccount nodig, en ze werkt ook op oudere iOS-versies.
 - Een native app is enkel zinvol als de webapp tekortschiet.
+
+---
+
+## Ideeën voor tussendoor (nice to have)
+Losse klussen die niet nodig zijn voor de volgende fase, om af en toe eentje tussen te nemen.
+Grootte: **S** = een uurtje, **M** = een middag, **L** = meerdere sessies. Meer uitleg staat
+bij de fase tussen haakjes; is een idee klaar, vink het dan hier en daar af.
+
+**Veiligheid en rijden**
+- [ ] (S-M) Gaten zien met de camera: floor_obstacles markeert ook wat onder de horizon
+      *verder* is dan de vloer (trap naar beneden). Eerst beelden aan de trap opnemen (fase 3)
+- [ ] (M) Cliff-sensor: ToF-sensor vooraan die naar de vloer kijkt, bv. VL53L1X (fase 3)
+- [ ] (M) Verboden zones op de kaart (Nav2-keepoutfilter), bv. trap en tapijt; tekenen in de app
+- [ ] (S) Links/rechts ongelijk bij ter plaatse draaien corrigeren (fase 3)
+- [ ] (M) Locaties met een naam ("zetel", "tv") en er vanuit de app naartoe rijden (fase 3)
+
+**Pupper-inspiratie** (fase 6)
+- [ ] (M) Spraak uit: Piper TTS op de USB-luidspreker (batterijmeldingen, "ik ben er")
+- [ ] (S-M) Expressie: geluidjes of een gezichtje in het dashboard
+- [ ] (M) Volgmodus: de dichtstbijzijnde persoon volgen (YOLO `person` + lidar-afstand)
+- [ ] (L) Taalmodel met tools: rijden, een foto beschrijven, naar een locatie rijden
+
+**Beeld** (fase 4)
+- [ ] (M) Beeldtaalmodel (VLM) dat beschrijft wat de camera ziet
+- [ ] (M) Herkende objecten op de kaart aanduiden (richting uit het beeld + lidar-afstand)
+- [ ] (M) Open woordenschat (YOLOE / YOLO-World): zoeken naar willekeurige woorden
+- [ ] (S) Kleurzweem (paars beeld) uitzoeken
+- [ ] (S per functie) Gezichten, gebaren, kleur, beweging, lijn volgen
+
+**Sneller en zuiniger** (Optimalisaties)
+- [ ] (S) Ongebruikte Nav2-servers niet starten (`docking_server`, `route_server`)
+- [ ] (M) pose_saver naar C++ (6-13% van een kern)
+- [ ] (M) Detectie en vloerobstakels in één proces (±250 MB RAM minder)
+- [ ] (M) JPEG in hardware decoderen (nu 9 ms CPU per beeld)
 
 ---
 
@@ -174,8 +210,7 @@ Volgende stappen, in deze volgorde:
    (AMCL-correcties?); zo nodig AMCL rustiger afstellen.
 2. Eventueel opnieuw verkennen (trap afgesloten) voor een volledige kaart met de gangen.
 3. Rijtest vloerobstakels: navigeren naar een doel achter een bal/kabel.
-4. Later: spraak (USB-luidspreker + Piper), VLM-scènebeschrijving, detectie en vloerobstakels
-   in één proces; gaten (trap) in floor_obstacles.
+4. Tussendoor: iets uit de [Ideeën voor tussendoor](#ideeën-voor-tussendoor-nice-to-have).
 
 Te controleren:
 - **Batterijcel:** de zwakke cel laadde 's middags weer met 1,5 A (was 150 mA) en werd niet
