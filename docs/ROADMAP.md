@@ -93,7 +93,8 @@ bij de fase tussen haakjes; is een idee klaar, vink het dan hier en daar af.
 **Veiligheid en rijden**
 - [ ] (S-M) Gaten zien met de camera: floor_obstacles markeert ook wat onder de horizon
       *verder* is dan de vloer (trap naar beneden). Eerst beelden aan de trap opnemen (fase 3)
-- [ ] (M) Cliff-sensor: ToF-sensor vooraan die naar de vloer kijkt, bv. VL53L1X (fase 3)
+- [ ] (M) Cliff-sensor: ToF-sensor vooraan die naar de vloer kijkt, bv. VL53L1X (fase 3).
+      Tot dan enkel verkennen met de trap afgesloten (deur dicht of iets van ≥25 cm hoog)
 - [ ] (M) Verboden zones op de kaart (Nav2-keepoutfilter), bv. trap en tapijt; tekenen in de app
 - [ ] (S) Links/rechts ongelijk bij ter plaatse draaien corrigeren (fase 3)
 - [ ] (M) Locaties met een naam ("zetel", "tv") en er vanuit de app naartoe rijden (fase 3)
@@ -176,13 +177,21 @@ muren.
       volgen nu 93-94% van wat Nav2 vraagt (was onderstuurd)
 - [x] Niet rijden met de laadkabel in (`/charging_lock` van battery_monitor, lock in twist_mux;
       ook de RC en de app-joystick)
-- [ ] Oranje stippen (en de robot) springen in de app tijdens het rijden: waarschijnlijk de
-      correcties van AMCL (elke 10 cm / 11°). Meten op `livingauto4` hoe groot ze zijn; zo
-      nodig AMCL rustiger afstellen
+- [ ] Oranje stippen (en de robot) springen in de app tijdens het rijden. Gemeten 29-10-2026
+      op `livingauto5` (`scripts/nav_log.py`): AMCL verbetert bij elke update (±0,3 s tijdens het
+      rijden) 2-14 cm en 1-3°, afwisselend links en rechts; de schatting schommelt ±3-4°. Bij
+      stilstand werkt AMCL niet meer bij en blijft de laatste schatting staan (na de rit 5,5°
+      naast de muren); de odometrie zelf drijft bij stilstand maar ±1° per minuut. Te proberen:
+      `resample_interval` 2-3, `/request_nomotion_update` elke seconde bij stilstand (AMCL blijft
+      dan bijwerken), eventueel minder deeltjes. Geparkeerd op 29-10 voor iets leukers
 - [ ] Verkennen: RPP meldt in smalle doorgangen vaak "collision ahead" en schuift terug;
       inflatie/collision-detectie van RPP afstellen
 - [ ] Verkennen: floor_obstacles standaard mee laten starten (lage obstakels)
-- [ ] **Trap/afgrond:** floor_obstacles ziet alleen wat *uit* de vloer steekt; een trap naar
+- [ ] Verkennen 29-10-2026 met de deur dicht (`livingauto5`): living in 2 min volledig in kaart,
+      "Alles verkend" klopte. Daarna lukte terugrijden niet: vast bij meubels (lidar 15 cm),
+      "collision ahead", achteruit en draaien mislukten; de richting liep ±10° weg. Opslaan
+      mislukte omdat `map_saver_cli` maar 2 s op de kaart wacht (Jetson druk): nu 10 s
+- **Trap/afgrond** (geparkeerd 29-10-2026, zie Ideeën voor tussendoor): floor_obstacles ziet alleen wat *uit* de vloer steekt; een trap naar
       beneden is een gat en wordt niet gezien (29-10-2026: tijdens het verkennen van de trap
       gereden, opgevangen). De lidar kijkt over het trapgat heen, dus de verkenner wil er
       heen. Voorlopig: enkel verkennen met de trap afgesloten (iets van ≥25 cm hoog) of met

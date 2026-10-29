@@ -128,7 +128,9 @@ class MapManager(Node):
             # Afbeelding (.pgm/.yaml) met de map_saver van Nav2.
             result = subprocess.run(
                 ['ros2', 'run', 'nav2_map_server', 'map_saver_cli', '-f', path,
-                 '--ros-args', '-p', 'map_subscribe_transient_local:=true'],
+                 '--ros-args', '-p', 'map_subscribe_transient_local:=true',
+                 # Standaard 2 s: te kort als de Jetson druk is (verkennen, 29-10-2026).
+                 '-p', 'save_map_timeout:=10.0'],
                 capture_output=True, text=True, timeout=60)
             if 'saved successfully' not in (result.stdout + result.stderr):
                 raise RuntimeError('afbeelding opslaan mislukt')
