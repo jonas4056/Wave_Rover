@@ -1,7 +1,10 @@
 """Bridge tussen ROS 2 en het ESP32 general driver board van de Wave Rover.
 
 - /cmd_vel (TwistStamped) wordt omgezet naar wielcommando's `{"T":1,"L":..,"R":..}`.
-  De motoren hebben geen encoders: dit is open-loop sturing.
+  De motoren hebben geen encoders: de snelheid vooruit is open-loop. De draaisnelheid wordt
+  bijgestuurd met de gyroscoop (PI-regelaar, `yaw_kp`/`yaw_ki`): de vaste omrekening klopt
+  niet meer zodra gewicht, vloer of batterij veranderen (29-10-2026: in bochten maar 18-30%
+  van de gevraagde draaisnelheid, waardoor Nav2 van zijn route afweek).
 - Komt er langer dan `cmd_timeout` geen /cmd_vel binnen, dan worden de motoren gestopt.
 - De IMU (`T:126` → antwoord `T:1002`) en de chassisfeedback (`T:130` → `T:1001`)
   worden periodiek opgevraagd en gepubliceerd als /imu/data_raw en /battery.
@@ -26,7 +29,7 @@ from sensor_msgs.msg import BatteryState, Imu
 G = 9.80665
 # Parameters die zonder herstart aangepast kunnen worden (zelfde naam als het attribuut).
 TUNABLE = ('min_wheel_cmd', 'min_turn_wheel_cmd', 'min_spin_wheel_cmd', 'spin_gain',
-           'curve_gain')
+           'curve_gain', 'yaw_loop', 'yaw_kp', 'yaw_ki', 'yaw_i_max')
 GYRO_BIAS_START = 40  # metingen bij stilstand voor het eerste nulpunt (2 s bij 20 Hz)
 
 
@@ -74,6 +77,12 @@ class Esp32Bridge(Node):
         self.declare_parameter('imu_frame', 'imu_link')
         # Tijdconstante (s) van het lopende gemiddelde voor het gyronulpunt.
         self.declare_parameter('gyro_bias_time', 10.0)
+        # Draaisnelheid bijsturen met de gyro: correctie = kp * fout + integraal(ki * fout),
+        # begrensd op yaw_i_max (rad/s). yaw_loop false = zoals vroeger (alleen de tabel).
+        self.declare_parameter('yaw_loop', True)
+        self.declare_parameter('yaw_kp', 0.5)
+        self.declare_parameter('yaw_ki', 2.0)
+        self.declare_parameter('yaw_i_max', 2.5)
 
         self.track_width = self.get_parameter('track_width').value
         self.speed_at_max_cmd = self.get_parameter('speed_at_max_cmd').value
@@ -91,6 +100,14 @@ class Esp32Bridge(Node):
         self.gyro_bias = [0.0, 0.0, 0.0]  # °/s
         self.gyro_samples = 0
         self.last_motion = time.monotonic()  # motoren draaiden; de eerste seconde niet meten
+        self.yaw_loop = self.get_parameter('yaw_loop').value
+        self.yaw_kp = self.get_parameter('yaw_kp').value
+        self.yaw_ki = self.get_parameter('yaw_ki').value
+        self.yaw_i_max = self.get_parameter('yaw_i_max').value
+        self.yaw_i = 0.0          # integraal van de draaicorrectie (rad/s)
+        self.yaw_last = None      # tijd van het vorige commando
+        self.gyro_z = 0.0         # gemeten draaisnelheid (rad/s, licht gefilterd)
+        self.gyro_time = 0.0
 
         port = self.get_parameter('port').value
         baud = self.get_parameter('baud').value
@@ -124,7 +141,7 @@ class Esp32Bridge(Node):
         """Afstelling tijdens het rijden aanpassen (`ros2 param set /esp32_bridge ...`)."""
         for p in params:
             if p.name in TUNABLE:
-                setattr(self, p.name, float(p.value))
+                setattr(self, p.name, p.value if p.name == 'yaw_loop' else float(p.value))
                 self.get_logger().info(f'{p.name} = {p.value}')
         return SetParametersResult(successful=True)
 
@@ -134,7 +151,8 @@ class Esp32Bridge(Node):
     def on_cmd_vel(self, stamped):
         msg = stamped.twist
         half = self.track_width / 2.0
-        wz = msg.angular.z * self.angular_gain(msg.linear.x, msg.angular.z * half)
+        wz = msg.angular.z + self.yaw_correction(msg.linear.x, msg.angular.z)
+        wz *= self.angular_gain(msg.linear.x, msg.angular.z * half)
         left = msg.linear.x - wz * half
         right = msg.linear.x + wz * half
 
@@ -143,6 +161,26 @@ class Esp32Bridge(Node):
         if left or right:
             self.last_motion = time.monotonic()
         self.last_cmd_time = self.get_clock().now()
+
+    def yaw_correction(self, forward, wz_ref):
+        """PI-correctie (rad/s) zodat de gyro meet wat gevraagd wordt."""
+        now = time.monotonic()
+        dt = min(0.1, now - self.yaw_last) if self.yaw_last else 0.05
+        self.yaw_last = now
+        if not self.yaw_loop or (abs(forward) < 1e-3 and abs(wz_ref) < 1e-3):
+            self.yaw_i = 0.0  # stilstand: geen opgebouwde correctie meenemen
+            return 0.0
+        if now - self.gyro_time > 0.3:
+            return 0.0  # geen verse gyrometing (nog geen nulpunt of IMU weg)
+        error = wz_ref - self.gyro_z
+        self.yaw_i = max(-self.yaw_i_max, min(self.yaw_i_max, self.yaw_i + self.yaw_ki * error * dt))
+        correction = self.yaw_kp * error + self.yaw_i
+        if wz_ref * (wz_ref + correction) < 0:
+            # Nooit tegen de gevraagde richting in: trager dan het minimum van de motoren kan
+            # niet, dan liever even 0 (en de integraal niet verder laten oplopen).
+            self.yaw_i -= wz_ref + correction
+            correction = -wz_ref
+        return correction
 
     def angular_gain(self, forward, turn):
         """Vloeiend van `curve_gain` (vooral vooruit) naar `spin_gain` (op de plaats draaien)."""
@@ -185,6 +223,7 @@ class Esp32Bridge(Node):
         if age > self.cmd_timeout:
             self.stop_motors()
             self.last_cmd_time = None
+            self.yaw_i = 0.0
 
     def read_loop(self):
         while rclpy.ok():
@@ -227,6 +266,9 @@ class Esp32Bridge(Node):
         if self.gyro_samples < GYRO_BIAS_START:
             return  # zonder nulpunt liever geen IMU dan een draaiende robot
         gx, gy, gz = (g - b for g, b in zip(gyro, self.gyro_bias))
+        # Voor de draairegeling: licht gefilterd (ruis ±4,5 °/s bij 20 Hz).
+        self.gyro_z = 0.5 * self.gyro_z + 0.5 * math.radians(gz)
+        self.gyro_time = time.monotonic()
 
         msg = Imu()
         msg.header.stamp = self.get_clock().now().to_msg()
