@@ -14,8 +14,8 @@ Onderdeel van de module explore (explore.launch.py: slam_toolbox maakt de kaart,
 3. Geen bereikbare rand meer, `max_failures` doelen na elkaar mislukt of `max_time` voorbij: terug naar het startpunt, kaart opslaan
    onder de naam (via map_manager) en kiezen voor de navigatie. Bij /explore/stop
    (std_msgs/Empty) of de stopknop van de kaart: meteen stoppen en opslaan, zonder terugrijden.
-Staat het chassis uit (schakelaar, /chassis/battery < 6 V), dan wacht hij en meldt dat; doelen
-die dan mislukken tellen niet als onbereikbaar.
+Staat het chassis uit (schakelaar, /chassis/battery < 6 V) of zit de laadkabel in
+(/charging_lock), dan wacht hij en meldt dat; doelen die dan mislukken tellen niet mee.
 Status op /explore/status (std_msgs/String, JSON, latched):
   {"state": "wacht|verkennen|terug|stoppen|opslaan|klaar|fout", "message": "...", "name": "..."}
 Rekent alleen bij het kiezen en controleren van een doel (numpy, enkele ms). De positie komt
@@ -120,6 +120,8 @@ class Explorer(Node):
         self.create_subscription(String, 'maps/list', self.on_maps, latched)
         self.create_subscription(Bool, 'e_stop', self.on_e_stop, latched)
         self.create_subscription(BatteryState, 'chassis/battery', self.on_chassis, 10)
+        self.create_subscription(Bool, 'charging_lock',
+                                 lambda m: setattr(self, 'charging', m.data), latched)
         self.nav = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         self.grid = None      # numpy (rijen = y, kolommen = x)
@@ -128,6 +130,7 @@ class Explorer(Node):
         self.maps = []
         self.e_stop = False
         self.chassis_v = None
+        self.charging = False
 
         self.state, self.name, self.started = 'wacht', '', 0.0
         self.pending = ''         # naam van een start die wacht tot kaart en Nav2 klaar zijn
@@ -142,7 +145,7 @@ class Explorer(Node):
         self.goals_done = 0
         self.failures = 0         # mislukte doelen na elkaar
         self.next_goal_at = 0.0
-        self.paused = False       # chassis uit
+        self.paused = None        # reden van de pauze (chassis uit, laadkabel in)
         self.publish_status('Wacht op start (knop "Verken" in het dashboard)')
         self.create_timer(1.0, self.tick)
 
@@ -179,8 +182,13 @@ class Explorer(Node):
     def on_chassis(self, msg):
         self.chassis_v = msg.voltage
 
-    def motors_off(self):
-        return self.chassis_v is not None and self.chassis_v < CHASSIS_MIN_V
+    def blocked(self):
+        """Waarom de robot nu niet kan rijden, of None."""
+        if self.chassis_v is not None and self.chassis_v < CHASSIS_MIN_V:
+            return 'Het chassis staat uit: zet de schakelaar aan, dan rijdt hij verder'
+        if self.charging:
+            return 'De laadkabel zit in: trek hem uit, dan rijdt hij verder'
+        return None
 
     def on_start(self, msg):
         name = msg.data.strip()
@@ -210,14 +218,15 @@ class Explorer(Node):
         if self.state != 'verkennen':
             return
         now = time.monotonic()
-        if self.motors_off():
-            if not self.paused:
-                self.paused = True
-                self.publish_status('Het chassis staat uit: zet de schakelaar aan, dan rijdt hij verder')
+        reason = self.blocked()
+        if reason:
+            if self.paused != reason:
+                self.paused = reason
+                self.publish_status(reason)
             self.progress = (None, 0.0)  # telt niet als vastzitten
             return
         if self.paused:
-            self.paused = False
+            self.paused = None
             self.publish_status('Verkennen…')
         if now - self.started > self.p['max_time']:
             self.finish(f'Tijd om ({self.p["max_time"] / 60:.0f} min)')
@@ -339,8 +348,8 @@ class Explorer(Node):
             self.stop('gestopt met de stopknop')  # iemand anders annuleerde: stoppen
             return
         self.goals_done += 1
-        if self.motors_off():
-            return  # mislukt omdat de motoren geen stroom hadden: later opnieuw proberen
+        if self.blocked():
+            return  # mislukt omdat de robot niet mocht of kon rijden: later opnieuw proberen
         # Niet bereikt, vast, of bereikt maar de rand blijft onbekend: niet opnieuw proberen.
         if (status == GoalStatus.STATUS_ABORTED or reason == 'vast'
                 or (status == GoalStatus.STATUS_SUCCEEDED and self.frontier_left(goal))):

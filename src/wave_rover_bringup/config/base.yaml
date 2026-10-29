@@ -65,3 +65,8 @@ twist_mux:
         topic: e_stop
         timeout: 0.0
         priority: 255
+      # Laadkabel in (battery_monitor): niet rijden, ook niet met de RC.
+      charging:
+        topic: charging_lock
+        timeout: 0.0
+        priority: 255

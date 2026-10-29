@@ -83,6 +83,8 @@ function subscribeAll() {
     .subscribe((m) => showModules(JSON.parse(m.data)));
   topic('/e_stop', 'std_msgs/msg/Bool')
     .subscribe((m) => showEstop(m.data));
+  topic('/charging_lock', 'std_msgs/msg/Bool')
+    .subscribe((m) => showCharging(m.data));
   topic('/power/shutdown_in', 'std_msgs/msg/Int32')
     .subscribe((m) => showShutdown(m.data));
 
@@ -239,9 +241,20 @@ document.addEventListener('visibilitychange', () => {
 
 // --- noodstop -----------------------------------------------------------------------
 
+let estopActive = false;
+let chargingLock = false;
+
 function showEstop(active) {
+  estopActive = active;
   $('estop-state').hidden = !active;
-  $('joystick').classList.toggle('disabled', active);
+  $('joystick').classList.toggle('disabled', estopActive || chargingLock);
+}
+
+// Laadkabel in (battery_monitor): twist_mux blokkeert dan alle rijcommando's.
+function showCharging(locked) {
+  chargingLock = locked;
+  $('charging-state').hidden = !locked;
+  $('joystick').classList.toggle('disabled', estopActive || chargingLock);
 }
 
 function setEstop(active) {

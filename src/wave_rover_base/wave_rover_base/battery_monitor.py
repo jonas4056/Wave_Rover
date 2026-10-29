@@ -5,13 +5,22 @@
 
 Beide als sensor_msgs/BatteryState met spanning, stroom (alleen UPS), percentage (0-1)
 en laadstatus. Onder `warn_percentage` volgt een waarschuwing in het log.
+
+Laadkabel: zolang de adapter in zit, mag de robot niet rijden (hij zou de kabel meetrekken).
+/charging_lock (std_msgs/Bool, latched) is een lock in twist_mux, net als de noodstop, en
+blokkeert ook de RC. Kabel in = de batterij ontlaadt niet (stroom > UNPLUGGED_CURRENT; op
+batterij trekt de Jetson alleen al >0,5 A). Meteen blokkeren, pas na 2 metingen (4 s)
+vrijgeven. Bewust toch aan de kabel rijden: ros2 param set /battery_monitor
+block_when_charging false.
 """
 import fcntl
 import os
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from sensor_msgs.msg import BatteryState
+from std_msgs.msg import Bool
 
 from wave_rover_base.battery import percentage
 
@@ -21,6 +30,7 @@ REG_BUS = 0x02
 SHUNT_OHM = 0.01
 # Boven deze spanning meet de UPS de adapter, niet de batterij.
 MAX_PACK_VOLTAGE = 12.8
+UNPLUGGED_CURRENT = -0.15  # A; daaronder ontlaadt de batterij: de kabel is eruit
 
 
 class Ina219:
@@ -59,6 +69,11 @@ class BatteryMonitor(Node):
         self.chassis_pub = self.create_publisher(BatteryState, 'chassis/battery', 10)
         self.create_subscription(BatteryState, 'battery', self.on_chassis, 10)
         self.create_timer(2.0, self.publish_ups)
+        self.declare_parameter('block_when_charging', True)
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.lock_pub = self.create_publisher(Bool, 'charging_lock', latched)
+        self.unplugged_count = 0
+        self.locked = None
         self.warned = {'jetson': False, 'chassis': False}
 
     def check_low(self, name, pct, discharging):
@@ -66,6 +81,15 @@ class BatteryMonitor(Node):
         if low and not self.warned[name]:
             self.get_logger().warn(f'Batterij {name} bijna leeg: {pct:.0f}%')
         self.warned[name] = low
+
+    def update_charging_lock(self, current):
+        self.unplugged_count = self.unplugged_count + 1 if current < UNPLUGGED_CURRENT else 0
+        locked = self.get_parameter('block_when_charging').value and self.unplugged_count < 2
+        if locked != self.locked:
+            self.get_logger().info('Laadkabel in: rijden geblokkeerd' if locked
+                                   else 'Op batterij: rijden mag')
+        self.locked = locked
+        self.lock_pub.publish(Bool(data=locked))
 
     def publish_ups(self):
         try:
@@ -95,6 +119,7 @@ class BatteryMonitor(Node):
         else:
             msg.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_NOT_CHARGING
         self.ups_pub.publish(msg)
+        self.update_charging_lock(current)
         if msg.present:
             self.check_low('jetson', msg.percentage * 100, current < -0.05)
 

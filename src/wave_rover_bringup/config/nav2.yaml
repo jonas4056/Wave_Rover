@@ -13,8 +13,7 @@
 # afwijking eerst op de plaats draaien (rotate_to_heading_min_angle).
 # Draaien wordt meteen afgeremd (max_decel -30): anders schiet de robot voorbij de doelrichting
 # en pendelt hij heen en weer.
-# AMCL start op het beginpunt van de kaart (waar het mappen begon), zodat Nav2 altijd
-# volledig opstart; een andere startplek corrigeer je met 2D Pose Estimate in RViz.
+# Lokalisatie met AMCL (standaard sinds 29-10-2026) of slam_toolbox, zie navigation.launch.py.
 
 amcl:
   ros__parameters:
@@ -55,12 +54,7 @@ amcl:
     z_rand: 0.5
     z_short: 0.05
     scan_topic: scan
-    set_initial_pose: true
-    initial_pose:
-      x: 0.0
-      y: 0.0
-      z: 0.0
-      yaw: 0.0
+    # set_initial_pose en initial_pose komen uit navigation.launch.py (<kaart>.lastpose).
 bt_navigator:
   ros__parameters:
     global_frame: map
