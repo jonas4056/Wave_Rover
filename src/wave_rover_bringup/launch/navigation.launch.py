@@ -1,10 +1,12 @@
 """Autonoom navigeren met Nav2 op een opgeslagen kaart.
 
 Lokalisatie (argument `localization`), publiceert /map en de TF map -> odom:
-- `amcl` (standaard): deeltjesfilter dat elke scan met de opgeslagen kaart (.pgm/.yaml)
+- `amcl`: deeltjesfilter dat elke scan met de opgeslagen kaart (.pgm/.yaml)
   vergelijkt, via map_server + amcl in het Nav2-proces. Een fout bij het draaien stapelt
   zich zo niet op.
-- `slam`: slam_toolbox in lokalisatiemodus op de posegraph. Was de keuze toen de
+  Sprong bij ter plaatse draaien alle kanten op (29-10-2026), eerst uitgesmeerde scans
+  oplossen; daarom voorlopig niet de standaard.
+- `slam` (standaard): slam_toolbox in lokalisatiemodus op de posegraph. Was de keuze toen de
   odometrie nog slecht was (gyro scheef, geen draaibijsturing), maar vergelijkt vooral met
   zijn eigen recente scans: na ter plaatse draaien stond de richting 10-20 graden scheef en
   dat bleef zo (gemeten 29-10-2026).
@@ -131,7 +133,7 @@ def generate_launch_description():
             'map', default_value=default_map(),
             description='Opgeslagen kaart (posegraph van slam_toolbox), zonder extensie'),
         DeclareLaunchArgument(
-            'localization', default_value='amcl', choices=['amcl', 'slam'],
+            'localization', default_value='slam', choices=['amcl', 'slam'],
             description='amcl (vergelijkt met de opgeslagen kaart) of slam (slam_toolbox)'),
         OpaqueFunction(function=localization_actions),
         IncludeLaunchDescription(PathJoinSubstitution([share, 'launch', 'nav2.launch.py'])),
