@@ -52,6 +52,19 @@ PERSONA = (
     'vraagt over wat je ziet; verzin niets over wat je ziet. Rijden via een gesprek kan nog '
     'niet; zeg dat eerlijk, met een knipoog.'
 )
+# Voorbeeldgesprekjes: zonder voorbeelden rammelde de 4B en zat hij in herhaallussen ("En dan:
+# ... En dan: ..."); met deze drie kort, samenhangend en telkens iets nieuws (getest 30-10-2026).
+EXAMPLES = [
+    ('Vertel eens een mop.', 'Waarom nam de robot zijn paraplu mee? Omdat hij bang was om te '
+                             'roesten! Ken jij er nog eentje?'),
+    ('Ik ben moe vandaag.', 'Oei, lange dag gehad? Ik zou je een tas koffie brengen, maar mijn '
+                            'armen zijn nog niet geleverd.'),
+    ('Vertel eens iets zot.', 'Wist je dat een octopus drie harten heeft? Ik heb er nul, maar wel '
+                              'vier wielen. Wie wint er volgens jou?'),
+]
+EXAMPLE_MESSAGES = [m for q, a in EXAMPLES
+                    for m in ({'role': 'user', 'content': q}, {'role': 'assistant', 'content': a})]
+MAX_SENTENCES = 3
 # Spontaan babbelen: eerst een gewone beschrijving (betrouwbaar), daarna een grappige zin erover.
 LOOK_AROUND = ('Je keek net even rond en zag dit: "{seen}" Zeg er in één korte, grappige of '
                'nieuwsgierige zin iets over tegen Jonas.')
@@ -275,7 +288,21 @@ class Assistant(Node):
                        f'Verklap het niet. Zeg of een gok juist is en geef een kleine hint als '
                        f'Jonas erom vraagt. Is het geraden of geeft hij op, gebruik dan '
                        f'stop_ik_zie_spel.')
-        messages = [{'role': 'system', 'content': system}] + self.history[-MAX_HISTORY:]
+        messages = ([{'role': 'system', 'content': system}] + EXAMPLE_MESSAGES
+                    + self.history[-MAX_HISTORY:])
+        answer = self.answer(messages, text)
+        if self.repeats(answer):
+            # Zelfde antwoord als eerder: één keer opnieuw vragen.
+            answer = self.answer(messages + [{'role': 'system', 'content':
+                                              'Zeg iets nieuws; herhaal jezelf niet.'}], text)
+        answer = answer or 'Sorry, daar weet ik even geen antwoord op.'
+        self.history.append({'role': 'assistant', 'content': answer})
+        self.get_logger().info(f'"{text}" -> "{answer}" ({time.monotonic() - start:.1f} s)')
+        return answer
+
+    def answer(self, messages, text):
+        """Vragen tot er een antwoord is (met tussendoor tools), opgeschoond."""
+        messages = list(messages)
         answer = ''
         for _ in range(MAX_TOOL_ROUNDS):
             reply = self.ask(messages, tools=TOOLS, max_tokens=150)
@@ -291,10 +318,24 @@ class Assistant(Node):
                 self.get_logger().info(f'Tool {name}: {result}')
                 messages.append({'role': 'tool', 'tool_call_id': call.get('id', name),
                                  'content': result})
-        answer = answer or 'Sorry, daar weet ik even geen antwoord op.'
-        self.history.append({'role': 'assistant', 'content': answer})
-        self.get_logger().info(f'"{text}" -> "{answer}" ({time.monotonic() - start:.1f} s)')
-        return answer
+        return self.tidy(answer)
+
+    @staticmethod
+    def tidy(text):
+        """Herhaalde zinnen eruit (kleine modellen lopen soms in een lus) en hoogstens
+        MAX_SENTENCES zinnen."""
+        seen, kept = set(), []
+        for sentence in re.findall(r'[^.!?]+[.!?]*', text):
+            key = sentence.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                kept.append(sentence.strip())
+        return ' '.join(kept[:MAX_SENTENCES])
+
+    def repeats(self, answer):
+        previous = {m['content'].strip().lower() for m in self.history
+                    if m['role'] == 'assistant'}
+        return bool(answer) and answer.strip().lower() in previous
 
     def run_tool(self, name, question):
         if name == 'kijk':

@@ -50,13 +50,25 @@ const TalkCard = (() => {
     input.value = '';  // toetsenbord open laten voor het volgende
   });
 
-  // Dicteren met de iPhone: die zet zelf een punt of vraagteken. Eindigt de tekst daarop en
-  // verandert ze 1,5 s niet meer, dan vanzelf versturen (zonder op Stuur te tikken).
+  // Dicteren met de iPhone: hele woorden komen in één keer binnen (typen: letter per letter),
+  // en een leesteken zet hij in het Nederlands niet altijd. Gedicteerd, of eindigend op . ? !,
+  // en 2 s geen verandering meer: vanzelf versturen (zonder op Stuur te tikken).
   let autoSend = null;
-  input.addEventListener('input', () => {
+  let dictated = false;
+  input.addEventListener('input', (event) => {
     clearTimeout(autoSend);
-    if (/[.?!]\s*$/.test(input.value)) autoSend = setTimeout(() => form.requestSubmit(), 1500);
+    if (!input.value.trim()) {
+      dictated = false;
+      return;
+    }
+    if (event.inputType === 'insertText' && event.data && event.data.trim().length > 1) {
+      dictated = true;
+    }
+    if (dictated || /[.?!]\s*$/.test(input.value)) {
+      autoSend = setTimeout(() => form.requestSubmit(), 2000);
+    }
   });
+  form.addEventListener('submit', () => { dictated = false; });
   document.querySelectorAll('[data-say]').forEach((b) => {
     b.addEventListener('click', () => send(b.dataset.say));
   });
