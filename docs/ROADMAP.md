@@ -252,6 +252,22 @@ Te controleren:
   cellen opnieuw meten; blijft de zwakke cel duidelijk achter (> 0,05 V) = vervangen.
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
+### Opgelost 30-10-2026 (na de demo van 29-10)
+- [x] App: na het wisselen van explore naar navigation bleef de kaart leeg tot de app een paar
+      keer herstart was. Oorzaak: rosbridge kiest de QoS bij het abonneren; zonder publisher
+      met "transient local" op dat moment krijgt hij de kaart van map_server (één keer
+      gepubliceerd) nooit. Nu abonneert de app opnieuw als een kaartmodule aangaat
+- [x] App: de batterijtegel sprong zonder batterij tussen een percentage en "geen batterij"
+      (adapter schommelt 12,0-14,0 V), waardoor de kaart telkens verschoof. battery_monitor
+      houdt "geen batterij" nu 30 s vast; de tegel blijft op één regel
+- [x] Knop "Robot afsluiten" (Modules): alle modules uit, gesproken herinnering (UPS-schakelaar
+      en chassisknopje), Jetson netjes uit. Ook bij een lege batterij eerst modules stoppen
+      en een melding via de speaker. Tot nu werd de UPS-schakelaar uitgezet terwijl de Jetson
+      nog draaide (boot 29-10 eindigde ABRUPT)
+- Demo-log 29-10: verkennen beneden (`benedenauto`) en navigeren werkten; "Zoek mij" vond de
+  robot (0,48 tegen -0,21). De groene lijn wordt met een afwijking gevolgd (AMCL-schommeling,
+  zie fase 3); floor_obstacles zag een raam tot op de grond als obstakel
+
 ### Openstaand (stand 21-10-2026)
 - [ ] Lidar steviger bevestigen (M2,5-standoffs), daarna kaart `living_v3` maken met de
       gecorrigeerde odometrie en de navigatie daarop testen
