@@ -12,14 +12,19 @@ PIPER = '/opt/piper/piper'
 VOICE = '/home/ubuntu/wave_rover/models/piper/nl_BE-nathalie-medium.onnx'
 # ALSA-naam van de USB-speaker ("USB2.0 Device" -> kaart Device).
 SPEAKER = 'plughw:CARD=Device,DEV=0'
+# Afstelling van Piper (standaard van Piper): tempo (kleiner = sneller), variatie in toon en in
+# klankduur (groter = levendiger), stilte na elke zin (s).
+STYLE = {'length_scale': 1.0, 'noise_scale': 0.667, 'noise_w': 0.8, 'sentence_silence': 0.2}
 
 
-def say(text, voice=VOICE, speaker=SPEAKER, piper=PIPER):
+def say(text, voice=VOICE, speaker=SPEAKER, piper=PIPER, style=None):
     """Piper maakt ruwe audio (16 bit mono), aplay speelt ze meteen af."""
     with open(voice + '.json') as f:
         rate = json.load(f)['audio']['sample_rate']
+    options = [arg for name, value in {**STYLE, **(style or {})}.items()
+               for arg in (f'--{name}', str(value))]
     synth = subprocess.Popen(
-        [piper, '--model', voice, '--output-raw'],
+        [piper, '--model', voice, '--output-raw', *options],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     aplay = subprocess.Popen(
         ['aplay', '-q', '-D', speaker, '-r', str(rate), '-f', 'S16_LE', '-c', '1', '-t', 'raw'],

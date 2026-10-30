@@ -131,11 +131,15 @@ class Assistant(Node):
         self.declare_parameter('piper', speech.PIPER)
         self.declare_parameter('voice', speech.VOICE)
         self.declare_parameter('speaker', speech.SPEAKER)
+        # Stem: altijd Vlaams (nl_BE); afstelling zoals speech.STYLE.
+        for name, value in speech.STYLE.items():
+            self.declare_parameter(name, value)
         self.declare_parameter('chatter', False)
         self.declare_parameter('chatter_interval', 60.0)
         self.p = {n: self.get_parameter(n).value for n in (
             'server', 'image_width', 'piper', 'voice', 'speaker', 'chatter_interval')}
         self.chatter = self.get_parameter('chatter').value
+        self.style = {n: self.get_parameter(n).value for n in speech.STYLE}
 
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.status_pub = self.create_publisher(String, 'assistant/status', latched)
@@ -272,7 +276,7 @@ class Assistant(Node):
             self.set_state('spreken', 'Spreekt…')
             try:
                 speech.say(UNSPEAKABLE.sub('', answer), self.p['voice'], self.p['speaker'],
-                           self.p['piper'])
+                           self.p['piper'], self.style)
             except (OSError, RuntimeError) as e:
                 self.get_logger().warn(f'Speaker: {e}')
             self.quiet_since = time.monotonic()

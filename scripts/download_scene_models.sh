@@ -1,7 +1,7 @@
 #!/bin/bash
 # Downloadt de modellen voor de module scene naar ~/wave_rover/models (niet in git):
 # - vlm/: beeldtaalmodellen (GGUF) voor llama-server: Qwen3-VL-2B (standaard), Qwen3-VL-4B en Gemma 3 4B
-# - piper/: Vlaamse stemmen voor Piper (Nathalie en rdh)
+# - piper/: Nederlandse stemmen voor Piper (Vlaams: Nathalie, rdh; Nederlands: Alex, Pim, Ronnie, mls met 52 sprekers)
 # Op de Jetson uitvoeren: bash ~/wave_rover/scripts/download_scene_models.sh
 set -e
 
@@ -26,9 +26,9 @@ get vlm "$HF/Qwen/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-4B-Instr
 get vlm "$HF/ggml-org/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf"
 get vlm "$HF/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf"
 
-for voice in nathalie rdh; do
+for voice in nl_BE/nathalie nl_BE/rdh nl_NL/alex nl_NL/pim nl_NL/ronnie nl_NL/mls; do
     for ext in onnx onnx.json; do
-        get piper "$HF/rhasspy/piper-voices/resolve/main/nl/nl_BE/$voice/medium/nl_BE-$voice-medium.$ext"
+        get piper "$HF/rhasspy/piper-voices/resolve/main/nl/$voice/medium/${voice%%/*}-${voice##*/}-medium.$ext"
     done
 done
 ls -lh "$MODELS/vlm" "$MODELS/piper"
