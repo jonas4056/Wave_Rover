@@ -49,6 +49,8 @@ modules:
     launch: detection.launch.py
     # Geen health-controle: de eerste start bouwt het TensorRT-engine (enkele minuten).
     requires: [camera]
+    # Samen met scene past de grote taalmodelversie niet in het geheugen.
+    conflicts: [scene]
   floor_obstacles:
     description: Lage obstakels met de camera (diepteschatting op de GPU, 5 Hz) -> /floor_scan
     package: wave_rover_bringup
@@ -59,6 +61,8 @@ modules:
     package: wave_rover_bringup
     launch: scene.launch.py
     requires: [camera]
+    # YOLO (±0,7 GB) eruit: dan past Qwen3-VL-4B naast navigation (de 2B is te zwak om te praten).
+    conflicts: [detection]
   voice:
     description: Yahboom-spraakmodule (commando's, batterijmeldingen, noodstop)
     package: wave_rover_bringup

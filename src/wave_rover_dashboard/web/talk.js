@@ -45,8 +45,17 @@ const TalkCard = (() => {
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    clearTimeout(autoSend);
     send(input.value.trim());
     input.value = '';  // toetsenbord open laten voor het volgende
+  });
+
+  // Dicteren met de iPhone: die zet zelf een punt of vraagteken. Eindigt de tekst daarop en
+  // verandert ze 1,5 s niet meer, dan vanzelf versturen (zonder op Stuur te tikken).
+  let autoSend = null;
+  input.addEventListener('input', () => {
+    clearTimeout(autoSend);
+    if (/[.?!]\s*$/.test(input.value)) autoSend = setTimeout(() => form.requestSubmit(), 1500);
   });
   document.querySelectorAll('[data-say]').forEach((b) => {
     b.addEventListener('click', () => send(b.dataset.say));
@@ -76,7 +85,9 @@ const TalkCard = (() => {
     const s = JSON.parse(msg.data);
     state = s.state;
     if (s.chatter !== undefined) chatterBtn.classList.toggle('on', s.chatter);
-    status.textContent = s.state in STATUS_TEXT ? STATUS_TEXT[s.state] : s.text;
+    // "klaar" met een waarschuwing (bv. klein taalmodel) toch tonen.
+    const warn = s.state === 'klaar' && s.text.startsWith('Klein');
+    status.textContent = !warn && s.state in STATUS_TEXT ? STATUS_TEXT[s.state] : s.text;
     if (s.state === 'klaar' && pending.length) {
       pending.forEach((text) => sayTopic.publish({ data: text }));
       pending = [];

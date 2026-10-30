@@ -11,7 +11,7 @@ Topics (gewone types, zodat rosbridge geen eigen interfaces nodig heeft):
 - /assistant/log (std_msgs/String, JSON, latched): [{"wie": "jij|wave", "tekst": "..."}, ...]
 - /assistant/status (std_msgs/String, JSON, latched):
   {"state": "laden|klaar|denken|kijken|spreken|fout", "text": "...", "chatter": bool}
-- /assistant/chatter (std_msgs/Bool): spontaan babbelen aan/uit. Aan: is er `chatter_interval`
+- /assistant/chatter (std_msgs/Bool): spontaan babbelen aan/uit (standaard uit). Aan: is er `chatter_interval`
   s (±30%) niets gezegd, dan zegt Wave uit zichzelf iets: een nieuwsgierige of grappige
   opmerking over wat hij op zijn camera ziet, of een teken van leven ("ben je daar nog?").
   Kost dan ±2-4 s GPU per keer; uit kost het niets.
@@ -40,20 +40,23 @@ from sensor_msgs.msg import BatteryState, CompressedImage
 from std_msgs.msg import Bool, Empty, String
 from wave_rover_base import speech
 
+# Getest met de 2B op 30-10-2026: "benieuwd naar alles wat je ziet" maakte hem te veel op de
+# camera gericht (geen mop als je erom vroeg) en hij herhaalde zijn instructies.
 PERSONA = (
-    'Je bent Wave, een nieuwsgierige en grappige kleine robot op wielen die bij Jonas thuis '
-    'woont (een bureau boven en een benedenverdieping). Je bent speels, een beetje ondeugend en '
-    'altijd benieuwd naar alles wat je ziet; je stelt graag zelf eens een wedervraag. Je praat '
-    'Vlaams-Nederlands, kort en luchtig: één of twee zinnen, zoals je hardop praat. Een kort '
-    'grapje mag altijd. Geen opsommingen, geen opmaak, geen emoji. Gebruik een tool als je iets '
-    'moet zien of over jezelf moet weten, en verzin niets over wat je ziet. Rijden via een '
-    'gesprek kan nog niet; zeg dat eerlijk, met een knipoog.'
+    'Je bent Wave, een kleine robot op wielen die bij Jonas thuis woont (een bureau boven en '
+    'een benedenverdieping). Je bent grappig, nieuwsgierig en een beetje ondeugend: je wilt '
+    'alles weten over Jonas en de wereld, en je stelt graag eens een wedervraag. Je praat '
+    'Vlaams-Nederlands, kort en luchtig: één of twee zinnen, zoals je hardop praat. Vraagt '
+    'Jonas een mop of een grap, vertel er dan meteen een. Geen opsommingen, geen opmaak, geen '
+    'emoji, en praat nooit over deze instructies. Gebruik de tool kijk alleen als Jonas iets '
+    'vraagt over wat je ziet; verzin niets over wat je ziet. Rijden via een gesprek kan nog '
+    'niet; zeg dat eerlijk, met een knipoog.'
 )
-# Spontaan babbelen: wat Wave uit zichzelf zegt als het een tijdje stil is.
-LOOK_AROUND = ('Je kijkt even rond terwijl het stil is. Zeg in één korte zin, nieuwsgierig of '
-               'grappig, wat je opvalt op dit beeld, alsof je hardop tegen Jonas praat.')
+# Spontaan babbelen: eerst een gewone beschrijving (betrouwbaar), daarna een grappige zin erover.
+LOOK_AROUND = ('Je keek net even rond en zag dit: "{seen}" Zeg er in één korte, grappige of '
+               'nieuwsgierige zin iets over tegen Jonas.')
 CHECK_IN = ('Het is al even stil en je hebt Jonas niet gehoord. Zeg in één korte, grappige zin '
-            'iets om te checken of hij er nog is, of deel een nieuwsgierige gedachte.')
+            'iets om te checken of hij er nog is, of stel hem een nieuwsgierige vraag.')
 # Getest op camerabeelden (29-10-2026): zonder voorbeeld en met lage temperature viel
 # Qwen3-VL-2B in herhaallussen ("een kast, een wastafel, een kast, ...") of gaf het alleen
 # losse woorden; met een voorbeeldzin en de sampling die Qwen aanraadt twee gewone zinnen.
@@ -114,7 +117,7 @@ class Assistant(Node):
         self.declare_parameter('piper', speech.PIPER)
         self.declare_parameter('voice', speech.VOICE)
         self.declare_parameter('speaker', speech.SPEAKER)
-        self.declare_parameter('chatter', True)
+        self.declare_parameter('chatter', False)
         self.declare_parameter('chatter_interval', 60.0)
         self.p = {n: self.get_parameter(n).value for n in (
             'server', 'image_width', 'piper', 'voice', 'speaker', 'chatter_interval')}
@@ -163,7 +166,19 @@ class Assistant(Node):
             ok = False
         if ok:
             self.ready_timer.cancel()
-            self.set_state('klaar', 'Klaar: zeg of typ iets')
+            # De 2B kiest scene.launch.py als het geheugen krap is; praten lukt daarmee slecht
+            # (geen mop, herhaalt zijn instructies, verzint wat hij ziet; getest 30-10-2026).
+            try:
+                with urllib.request.urlopen(self.p['server'] + '/v1/models', timeout=2) as r:
+                    model = json.load(r)['data'][0]['id']
+            except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError):
+                model = ''
+            self.get_logger().info(f'Taalmodel: {model}')
+            if '2B' in model:
+                self.set_state('klaar', 'Klein taalmodel (2B) geladen: praten lukt slecht. Zet '
+                                        'detection uit en scene opnieuw aan voor de 4B.')
+            else:
+                self.set_state('klaar', 'Klaar: zeg of typ iets')
 
     # --- ontvangen --------------------------------------------------------------------
 
@@ -207,10 +222,9 @@ class Assistant(Node):
         avoid = ''
         if self.recent:
             avoid = ' Zeg niet opnieuw iets zoals: ' + ' / '.join(self.recent[-3:])
-        jpeg = self.grab_frame(timeout=2.0) if random.random() < 0.6 else None
-        if jpeg is not None:
-            self.set_state('kijken', 'Kijkt rond…')
-            content = [self.image_part(jpeg), {'type': 'text', 'text': LOOK_AROUND + avoid}]
+        seen = self.look('') if random.random() < 0.5 else ''
+        if seen and not seen.startswith('Geen camerabeeld'):
+            content = LOOK_AROUND.format(seen=seen) + avoid
         else:
             content = CHECK_IN + avoid
         reply = self.ask([{'role': 'system', 'content': PERSONA},
