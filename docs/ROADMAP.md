@@ -243,7 +243,12 @@ Te controleren:
   warm. 29-10-2026, halfleeg na gebruik en 15 min rust: 3,98 / 3,99 / 3,95 V (verschil
   0,04 V = goed). Daarna apart volgeladen in de externe lader (= weer gelijk).
   29-10-2026 14u, uit de lader, voor het terugplaatsen: 4,2 / 4,2 / 4,2 V (pas een paar uur
-  rust, dus nog geen echte zelfontladingstest). Nog doen: na gebruik en 15 min rust de
+  rust, dus nog geen echte zelfontladingstest).
+  **30-10-2026, na de demo en een nacht rust: 3,66 / 3,99 / 3,99 V** (pakket 11,64 V, app gaf
+  ±50%). Cel 1 liep in één rit 0,33 V verder leeg dan de andere -> minder capaciteit of
+  zelfontlading, waarschijnlijk schade van de diepe ontlading op 28-10. Niet meer zo gebruiken
+  en niet in de UPS laden (geen balancering: cel 2 en 3 zouden boven 4,2 V komen). Test: cel 1
+  apart vol (mAh noteren), 24 u los laten liggen, opnieuw meten. Waarschijnlijk vervangen. Nog doen: na gebruik en 15 min rust de
   cellen opnieuw meten; blijft de zwakke cel duidelijk achter (> 0,05 V) = vervangen.
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
