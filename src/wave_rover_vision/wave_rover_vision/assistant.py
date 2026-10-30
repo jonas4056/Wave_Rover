@@ -187,7 +187,7 @@ SING_REQUEST = re.compile(r'\b(zing|zingen|liedje|liedjes|muziekje|deuntje)\b', 
 MUSIC_DIR = '/home/ubuntu/wave_rover/models/muziek'
 PLAY_REQUEST = re.compile(r'\b(speel|muziek)\b', re.I)
 MUSIC_SECONDS = 30
-DANCE_ROUNDS = 2      # dansje zo vaak herhalen op muziek (2 x 4 s)
+DANCE_ROUNDS = 3      # dansje zo vaak herhalen op muziek (3 x 4 s = 12 s)
 SONG_NAMES = {'jacob': 'Vader Jacob', 'kortjakje': 'Altijd is Kortjakje ziek',
               'verjaardag': 'Happy Birthday', 'jarig': 'Happy Birthday', 'birthday': 'Happy Birthday'}
 # Geluidjes tijdens het rijden: bij vertrekken na zoveel s stilstand, met deze kans, hoogstens
