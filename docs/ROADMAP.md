@@ -386,6 +386,14 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
 - [ ] Spraak uit: USB-luidspreker (eerst zonder microfoon) + Piper TTS; later een Jabra
       (microfoon + luidspreker) voor spraakbediening
 - [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
+- **Richting (afgesproken 30-10-2026): hybride.** Vier blokken: oren (spraak -> tekst), brein
+  (begrijpen en een tool kiezen), handen (robotfuncties als ROS-services: rijden, naar een plaats,
+  voorwerp zoeken, beschrijven, batterij), stem (tekst -> spraak). De handen zijn altijd lokaal.
+  Lokaal brein = Qwen3-VL-4B (werkt ook zonder internet/hotspot, eenvoudige opdrachten); met
+  internet optioneel Claude als slimmer brein met dezelfde tools (echte gesprekken, karakter).
+  Volgorde: eerst de tools + een chatvenster in de app (tekst), dan beide breinen vergelijken,
+  dan spraak (iPhone-microfoon via HTTPS of Whisper op de GPU) en een stem met meer karakter.
+  Geheugen: navigation + floor_obstacles + Qwen-4B + Whisper ≈ 6,5 van 7,3 GB
 
 **Inspiratie: [Pupper v3](https://pupper-v3-documentation.readthedocs.io/en/latest/)**
 (open-source robothond van Stanford). Hoe zijn AI werkt staat op
