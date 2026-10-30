@@ -9,12 +9,13 @@ import json
 import subprocess
 
 PIPER = '/opt/piper/piper'
-VOICE = '/home/ubuntu/wave_rover/models/piper/nl_BE-nathalie-medium.onnx'
+# Altijd Vlaams. Gekozen door Jonas op 30-10-2026 uit 6 proefjes: rdh (man), levendig (nr. 5).
+VOICE = '/home/ubuntu/wave_rover/models/piper/nl_BE-rdh-medium.onnx'
 # ALSA-naam van de USB-speaker ("USB2.0 Device" -> kaart Device).
 SPEAKER = 'plughw:CARD=Device,DEV=0'
-# Afstelling van Piper (standaard van Piper): tempo (kleiner = sneller), variatie in toon en in
-# klankduur (groter = levendiger), stilte na elke zin (s).
-STYLE = {'length_scale': 1.0, 'noise_scale': 0.667, 'noise_w': 0.8, 'sentence_silence': 0.2}
+# Afstelling van Piper: tempo (kleiner = sneller), variatie in toon en in klankduur (groter =
+# levendiger), stilte na elke zin (s). Piper zelf: 1.0 / 0.667 / 0.8 / 0.2.
+STYLE = {'length_scale': 0.9, 'noise_scale': 0.85, 'noise_w': 0.95, 'sentence_silence': 0.15}
 
 
 def say(text, voice=VOICE, speaker=SPEAKER, piper=PIPER, style=None):
