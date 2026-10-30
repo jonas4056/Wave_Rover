@@ -253,6 +253,14 @@ Te controleren:
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
 ### Opgelost 30-10-2026 (na de demo van 29-10)
+- [x] Stippen dreven bij stilstand weg (15° na enkele minuten, 50% van de punten op de muren):
+      de odometrie draait stilstaand ±1,7°/min (gyro, rf2o) en AMCL werkt pas bij na 10 cm /
+      11°. pose_saver vraagt nu bij stilstand om de 2 s `request_nomotion_update`: 5 min
+      stilstaand 95-97% op de muren, hooguit 1,5° ernaast (`scripts/map_fit.py`)
+- [x] Zelf de kaart herkennen bij navigation en "Zoek mij" (bureau 0,54 tegen beneden 0,19)
+- [x] Praat met Wave (tab Praat): lokaal taalmodel kiest tools kijk/batterij/uur/ik-zie-spel;
+      praten met de dicteerknop van het iPhone-toetsenbord. Scene: model:=auto, geen
+      promptcache (OOM-killer stopte llama-server met alles aan)
 - [x] Kaarten opgeruimd: `bureau` (was `livingauto5`, boven) en `beneden` (was `benedenauto`,
       zelf verkend 29-10). Oude kaarten in `~/wave_rover/maps/archief/` (terug te zetten).
       Vergelijking 2B/4B: 4B spreekt beter Nederlands -> standaard voor scene
