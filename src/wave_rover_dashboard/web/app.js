@@ -330,6 +330,7 @@ let lastModules = {};
 
 function showModules(modules) {
   lastModules = modules;
+  MapView.onModules(modules);
   const list = $('modules');
   list.replaceChildren();
   for (const [name, info] of Object.entries(modules)) {

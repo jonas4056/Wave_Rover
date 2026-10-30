@@ -171,9 +171,10 @@ const MapView = (() => {
       ctx.fillStyle = '#8a97a8';
       ctx.font = '600 15px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Geen kaart', w / 2, h / 2 - 10);
+      ctx.fillText(mapModule.starting ? `${mapModule.name} start…` : 'Geen kaart', w / 2, h / 2 - 10);
       ctx.font = '13px -apple-system, sans-serif';
-      ctx.fillText('Zet navigation aan bij Modules', w / 2, h / 2 + 12);
+      ctx.fillText(mapModule.starting ? 'Even geduld, dat duurt tot een halve minuut'
+        : 'Zet navigation aan bij Modules', w / 2, h / 2 + 12);
       ctx.textAlign = 'start';
     } else {
       const topLeft = worldToScreen(mapInfo.ox, mapInfo.oy + mapInfo.height * mapInfo.resolution);
@@ -362,7 +363,7 @@ const MapView = (() => {
       new ROSLIB.Topic({ ros, name, messageType, ...options });
 
     // De kaart verandert zelden: hooguit om de 5 s ophalen (alleen de laatste).
-    topic('/map', 'nav_msgs/msg/OccupancyGrid', { throttle_rate: 5000, queue_length: 1 }).subscribe(onMap);
+    subscribeMap();
     topic('/robot_pose', 'geometry_msgs/msg/PoseStamped', { throttle_rate: 200 }).subscribe(onPose);
     topic('/plan', 'nav_msgs/msg/Path', { throttle_rate: 1000, queue_length: 1 }).subscribe(onPlan);
     topic('/dashboard/lidar_points', 'std_msgs/msg/Int16MultiArray', { throttle_rate: 500, queue_length: 1 })
@@ -383,5 +384,42 @@ const MapView = (() => {
   }
 
   requestAnimationFrame(loop);
-  return { start };
+  // --- kaart opnieuw ophalen bij het wisselen van module ---------------------------
+  // Rosbridge kiest de QoS van zijn abonnement op het moment van abonneren. Is er dan geen
+  // publisher met "transient local" (bv. net tussen explore en navigation), dan luistert hij
+  // gewoon en krijgt hij de kaart van map_server (één keer gepubliceerd) nooit: de kaart bleef
+  // leeg tot de app herstartte (demo 29-10-2026). Daarom opnieuw abonneren zodra een
+  // kaartmodule aan staat, en nog eens kort daarna (map_server activeert pas na de module).
+  const MAP_MODULES = ['navigation', 'explore', 'slam'];
+  let mapTopic = null;
+  let mapModule = { name: '', starting: false };
+  let lastMapModuleState = {};
+  let resubscribeTimers = [];
+
+  function subscribeMap() {
+    if (mapTopic) mapTopic.unsubscribe();
+    mapTopic = new ROSLIB.Topic({
+      ros, name: '/map', messageType: 'nav_msgs/msg/OccupancyGrid', throttle_rate: 5000, queue_length: 1,
+    });
+    mapTopic.subscribe(onMap);
+  }
+
+  function onModules(modules) {
+    const starting = MAP_MODULES.find((m) => modules[m] && modules[m].state === 'start');
+    mapModule = { name: starting ? (starting === 'navigation' ? 'Navigatie' : 'Kaart maken') : '', starting: !!starting };
+    dirty = true;
+    for (const name of MAP_MODULES) {
+      const state = modules[name] && modules[name].state;
+      if (state === 'aan' && lastMapModuleState[name] !== 'aan' && ros) {
+        // Andere kaart op komst: de oude niet meer tonen tot de nieuwe binnen is.
+        mapImage = null;
+        fitted = false;
+        resubscribeTimers.forEach(clearTimeout);
+        resubscribeTimers = [0, 3000, 10000].map((ms) => setTimeout(subscribeMap, ms));
+      }
+      lastMapModuleState[name] = state;
+    }
+  }
+
+  return { start, onModules };
 })();
