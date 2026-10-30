@@ -11,6 +11,11 @@
   /scan (lidar, live) -> /dashboard/lidar_points, /floor_points (camera, met geheugen) ->
   /dashboard/floor_points. Hier en niet in een aparte node: TF ontvangen (40 berichten/s)
   kost in Python ~8% van een kern, en deze node doet dat toch al.
+- Laat AMCL ook bij stilstand met de kaart vergelijken: elke `nomotion_period` s
+  /request_nomotion_update als de robot stilstaat. AMCL werkt anders pas bij na 10 cm of 11°
+  rijden; stilstaand draaide de odometrie ±1,7° per minuut weg (gyro -3,3°, rf2o -0,9°,
+  gemeten 30-10-2026) en lagen de lidarstippen na enkele minuten naast de muren. Kost één
+  AMCL-update (90 stralen); zonder AMCL (slam, explore) gebeurt er niets.
 """
 import json
 import math
@@ -26,6 +31,7 @@ from rclpy.time import Time
 from sensor_msgs.msg import LaserScan, PointCloud2
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Int16MultiArray, String
+from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
 
 
@@ -38,6 +44,7 @@ class PoseSaver(Node):
         self.declare_parameter('publish_rate', 5.0)
         self.declare_parameter('obstacle_rate', 2.0)
         self.declare_parameter('lidar_max_range', 4.0)
+        self.declare_parameter('nomotion_period', 2.0)
         map_path = self.get_parameter('map').value
         self.path = map_path + '.lastpose' if map_path else None
         self.last = None
@@ -61,6 +68,10 @@ class PoseSaver(Node):
         self.floor_pub = self.create_publisher(Int16MultiArray, 'dashboard/floor_points', 1)
         self.create_timer(1.0 / self.get_parameter('obstacle_rate').value,
                           self.publish_obstacles)
+
+        self.nomotion = self.create_client(Empty, 'request_nomotion_update')
+        self.odom_pose = None  # (x, y, yaw) in odom bij de vorige controle
+        self.create_timer(self.get_parameter('nomotion_period').value, self.keep_localizing)
 
     def on_active_map(self, msg):
         self.path = msg.data + '.lastpose'
@@ -124,6 +135,24 @@ class PoseSaver(Node):
             msg = self.to_map_cm(f.header, pts.reshape(-1, 2))
             if msg is not None:
                 self.floor_pub.publish(msg)
+
+    def keep_localizing(self):
+        """Staat de robot stil, dan AMCL toch laten vergelijken (zie bovenaan)."""
+        try:
+            t = self.tf_buffer.lookup_transform('odom', 'base_footprint', Time()).transform
+        except TransformException:
+            return
+        q = t.rotation
+        pose = (t.translation.x, t.translation.y,
+                math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z)))
+        last, self.odom_pose = self.odom_pose, pose
+        if last is None or not self.nomotion.service_is_ready():
+            return
+        moved = math.hypot(pose[0] - last[0], pose[1] - last[1])
+        turned = abs((pose[2] - last[2] + math.pi) % (2 * math.pi) - math.pi)
+        # Drempels ruim boven de drift bij stilstand (0,06°/s), ver onder rijden.
+        if moved < 0.01 and turned < math.radians(1.0):
+            self.nomotion.call_async(Empty.Request())
 
     def save(self):
         t = self.transform
