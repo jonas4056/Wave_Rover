@@ -548,12 +548,25 @@ class Assistant(Node):
         return {os.path.basename(p)[:-4].replace('-', ' '): p
                 for p in glob.glob(os.path.join(MUSIC_DIR, '*.wav'))}
 
-    def find_music(self, text):
-        """Het eigen nummer waarvan alle woorden in de vraag staan (langste naam wint)."""
+    @staticmethod
+    def plain_words(text):
         plain = unicodedata.normalize('NFKD', text.lower()).encode('ascii', 'ignore').decode()
-        words = set(re.findall(r'[a-z0-9]+', plain))
-        hits = [(len(name), path) for name, path in self.music().items()
-                if set(name.split()) <= words]
+        return re.findall(r'[a-z0-9]+', plain)
+
+    def find_music(self, text):
+        """Het eigen nummer waarvan de naam of een bijnaam (<naam>.namen, bv. "lamine yamal")
+        helemaal in de vraag staat; de langste naam wint."""
+        words = set(self.plain_words(text))
+        hits = []
+        for name, path in self.music().items():
+            names = [name]
+            try:
+                with open(path[:-4] + '.namen') as f:
+                    names += [line.strip() for line in f if line.strip()]
+            except OSError:
+                pass
+            hits += [(len(n), path) for n in names
+                     if self.plain_words(n) and set(self.plain_words(n)) <= words]
         return max(hits)[1] if hits else None
 
     def run_move(self, name, rounds=1):
