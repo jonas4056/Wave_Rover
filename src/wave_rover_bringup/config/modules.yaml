@@ -24,7 +24,7 @@ modules:
     requires: [odometry]
     conflicts: [navigation, explore]
   navigation:
-    description: Autonoom navigeren met Nav2 op een opgeslagen kaart (lokalisatie met slam_toolbox)
+    description: Autonoom navigeren met Nav2 (AMCL); zoekt zelf of hij in bureau of beneden staat
     package: wave_rover_bringup
     launch: navigation.launch.py
     # Kaart: maps/current (kiezen in het dashboard), zie navigation.launch.py.

@@ -25,7 +25,7 @@ from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import LaserScan, PointCloud2
 from sensor_msgs_py import point_cloud2
-from std_msgs.msg import Int16MultiArray
+from std_msgs.msg import Int16MultiArray, String
 from tf2_ros import Buffer, TransformException, TransformListener
 
 
@@ -49,6 +49,8 @@ class PoseSaver(Node):
         self.create_timer(1.0 / self.get_parameter('publish_rate').value, self.publish)
         if self.path:
             self.create_timer(self.get_parameter('period').value, self.save)
+            # map_manager wisselde van kaart (robot stond in een andere vaste kaart).
+            self.create_subscription(String, 'maps/active', self.on_active_map, 10)
 
         self.lidar_max_range = self.get_parameter('lidar_max_range').value
         self.scan = None
@@ -59,6 +61,11 @@ class PoseSaver(Node):
         self.floor_pub = self.create_publisher(Int16MultiArray, 'dashboard/floor_points', 1)
         self.create_timer(1.0 / self.get_parameter('obstacle_rate').value,
                           self.publish_obstacles)
+
+    def on_active_map(self, msg):
+        self.path = msg.data + '.lastpose'
+        self.last = None
+        self.get_logger().info(f'Laatste positie voortaan in {self.path}')
 
     def publish(self):
         try:

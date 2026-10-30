@@ -15,8 +15,9 @@ Navigatie: de Nav2-navigatiestack uit nav2.launch.py (één proces, composition)
 snelheidscommando's gaan naar /cmd_vel_nav2 (ingang van twist_mux).
 
 Startpositie: de laatst bekende positie uit `<map>.lastpose` (bijgehouden door pose_saver),
-anders het beginpunt van de kaart. Corrigeren kan met "Zoek mezelf" in de app (map_manager)
-of 2D Pose Estimate in RViz (via /initialpose_rviz, zie initialpose_relay).
+anders het beginpunt van de kaart. Zodra Nav2 klaar is, zoekt map_manager zelf in welke vaste
+kaart (bureau, beneden) en waar de robot staat, en wisselt zo nodig van kaart. Corrigeren kan
+met "Zoek mij" in de app of 2D Pose Estimate in RViz (via /initialpose_rviz).
 
 Argument `map`: pad naar de opgeslagen kaart, zonder extensie (posegraph van slam_toolbox).
 Standaard de kaart uit `maps/current` (gekozen in het dashboard via map_manager).
@@ -112,7 +113,7 @@ def amcl_actions(map_path, share):
 
 
 MAPS_DIR = '/home/ubuntu/wave_rover/maps'
-FALLBACK_MAP = 'living_v3'
+FALLBACK_MAP = 'bureau'
 
 
 def default_map():

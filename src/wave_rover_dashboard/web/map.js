@@ -18,6 +18,7 @@ const MapView = (() => {
 
   let ros = null;
   let mapInfo = null;      // resolution, width, height, origin
+  let mapKey = '';         // afmetingen + oorsprong van de getoonde kaart
   let mapImage = null;     // offscreen canvas met de kaart (1 pixel per cel)
   let robot = null;        // {x, y, yaw}
   let plan = [];           // [{x, y}]
@@ -64,6 +65,11 @@ const MapView = (() => {
 
   function onMap(msg) {
     const { width, height, resolution, origin } = msg.info;
+    // Andere kaart tijdens de navigatie (map_manager vond de robot in een andere vaste kaart):
+    // opnieuw passend maken. Bij slam/explore groeit de kaart gewoon, dan niet.
+    const key = `${width}x${height}@${origin.position.x.toFixed(2)},${origin.position.y.toFixed(2)}`;
+    if (mapKey && key !== mapKey && lastMapModuleState.navigation === 'aan') fitted = false;
+    mapKey = key;
     mapInfo = { width, height, resolution, ox: origin.position.x, oy: origin.position.y };
     const off = document.createElement('canvas');
     off.width = width;

@@ -7,12 +7,17 @@ Topics (gewone berichttypes, zodat rosbridge geen eigen interfaces nodig heeft):
 - /maps/select (std_msgs/String): naam -> wordt de kaart voor de navigatie
   (`<maps_dir>/current`; navigation.launch.py leest dit bij het starten).
 - /maps/list (std_msgs/String, JSON, latched): {"maps": [...], "current": "...", "message": "..."}
-- /localization/find (std_msgs/Empty): zoek waar de robot op de huidige kaart staat (één
-  lidarscan tegen de opgeslagen kaart, zie relocalize.py) en geef dat als startpositie aan de
-  lokalisatie. Resultaat op /localization/status (std_msgs/String, JSON, latched):
-  {"busy": bool, "ok": bool, "message": "..."}.
+- /localization/find (std_msgs/Empty, knop "Zoek mij"): zoek in welke kaart en waar de robot
+  staat (één lidarscan tegen de vaste kaarten `fixed_maps` en de gekozen kaart, zie
+  relocalize.py) en geef dat als startpositie aan de lokalisatie. Staat hij in een andere
+  kaart dan de navigatie gebruikt, dan laadt map_server die (nav2 LoadMap; AMCL en de
+  costmaps volgen /map), wordt ze de gekozen kaart en meldt /maps/active (std_msgs/String,
+  pad zonder extensie) het aan pose_saver. Resultaat op /localization/status (std_msgs/String,
+  JSON, latched): {"busy": bool, "ok": bool, "message": "..."}.
+- Hetzelfde gebeurt vanzelf zodra de module navigation aan staat (/modules/status): de robot
+  start meestal in het bureau, soms beneden; eigen kaarten (bv. buiten) kies je met de hand.
 
-Doet niets zolang er geen verzoek komt.
+Rekent alleen bij een zoekopdracht (±1-3 s CPU per kaart).
 """
 import json
 import math
@@ -24,6 +29,7 @@ import time
 
 import rclpy
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+from nav2_msgs.srv import LoadMap
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from rclpy.time import Time
@@ -39,6 +45,8 @@ VALID_NAME = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 # (score per straal, zie relocalize.beam_score; living_v3: 0,62 tegen 0,33).
 FIND_MIN_SCORE = 0.35
 FIND_MIN_MARGIN = 0.12
+# Zoveel beter moet de beste kaart passen dan de beste andere kaart.
+MAP_MIN_MARGIN = 0.08
 
 
 class MapManager(Node):
@@ -46,7 +54,10 @@ class MapManager(Node):
     def __init__(self):
         super().__init__('map_manager')
         self.declare_parameter('maps_dir', '/home/ubuntu/wave_rover/maps')
+        # Vaste plaatsen: daartussen kiest hij zelf (zie locate); eigen kaarten met de hand.
+        self.declare_parameter('fixed_maps', ['bureau', 'beneden'])
         self.maps_dir = self.get_parameter('maps_dir').value
+        self.fixed_maps = list(self.get_parameter('fixed_maps').value)
         os.makedirs(self.maps_dir, exist_ok=True)
 
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -63,6 +74,10 @@ class MapManager(Node):
         self.find_pub = self.create_publisher(String, 'localization/status', latched)
         self.initial_pub = self.create_publisher(PoseWithCovarianceStamped, 'initialpose', 10)
         self.create_subscription(Empty, 'localization/find', self.on_find, 10)
+        self.load_map = self.create_client(LoadMap, 'map_server/load_map')
+        self.active_pub = self.create_publisher(String, 'maps/active', 10)
+        self.create_subscription(String, 'modules/status', self.on_modules, latched)
+        self.nav_state = None
         self.finding = False
         self.laser_offset = None  # (x, y, yaw) van de lidar op de robot, eenmalig uit TF
         self.publish_find(False, '')
@@ -170,7 +185,28 @@ class MapManager(Node):
             return
         self.finding = True
         self.publish_find(False, 'Zoeken…')
-        threading.Thread(target=self.find, daemon=True).start()
+        threading.Thread(target=self.locate, daemon=True).start()
+
+    def on_modules(self, msg):
+        """Navigation net aangezet: zelf zoeken in welke kaart de robot staat."""
+        state = json.loads(msg.data).get('navigation', {}).get('state')
+        if state == 'aan' and self.nav_state != 'aan' and not self.finding:
+            self.finding = True
+            self.publish_find(False, 'Navigatie start: zoeken waar ik ben…')
+            threading.Thread(target=self.auto_locate, daemon=True).start()
+        self.nav_state = state
+
+    def auto_locate(self):
+        # Nav2 komt pas na de module op (±20-40 s): wachten op AMCL en map_server.
+        end = time.monotonic() + 90.0
+        while time.monotonic() < end:
+            if self.count_subscribers('initialpose') > 0 and self.load_map.service_is_ready():
+                time.sleep(2.0)  # eerste scans en TF
+                self.locate()
+                return
+            time.sleep(1.0)
+        self.finding = False
+        self.publish_find(False, 'Navigatie niet klaar; probeer later "Zoek mij"')
 
     def wait_for_scan(self, timeout=3.0):
         got, done = [], threading.Event()
@@ -201,13 +237,18 @@ class MapManager(Node):
         finally:
             listener.unregister()
 
-    def find(self):
+    def map_path(self, name):
+        return os.path.join(self.maps_dir, name)
+
+    def locate(self):
+        """In welke kaart en waar staat de robot? Vaste kaarten + de gekozen kaart."""
         ok, message = False, ''
         try:
-            name = self.current()
-            yaml_path = os.path.join(self.maps_dir, name + '.yaml')
-            if not name or not os.path.exists(yaml_path):
-                raise RuntimeError('geen kaart gekozen')
+            current = self.current()
+            names = [n for n in dict.fromkeys(self.fixed_maps + [current])
+                     if n and os.path.exists(self.map_path(n) + '.yaml')]
+            if not names:
+                raise RuntimeError('geen kaart om in te zoeken')
             scan = self.wait_for_scan()
             if scan is None:
                 raise RuntimeError('geen lidarscan (staat de lidar aan?)')
@@ -215,26 +256,57 @@ class MapManager(Node):
                 self.laser_offset = self.lookup_laser_offset(scan.header.frame_id)
                 if self.laser_offset is None:
                     raise RuntimeError('positie van de lidar op de robot onbekend (TF)')
-            started = time.monotonic()
             beams = relocalize.Scan(scan.ranges, scan.angle_min, scan.angle_increment,
                                     scan.range_min, scan.range_max, self.laser_offset)
-            pose, best, second = relocalize.localize(relocalize.OccupancyMap(yaml_path), beams)
-            took = time.monotonic() - started
-            self.get_logger().info(
-                f'Zelf lokaliseren op {name}: {pose} score {best:.2f} (tweede {second:.2f}, '
-                f'{took:.1f} s)')
-            if pose is None or best < FIND_MIN_SCORE:
-                raise RuntimeError('de scan past nergens goed; staat de robot op deze kaart?')
-            if best - second < FIND_MIN_MARGIN:
+            results = []
+            for name in names:
+                started = time.monotonic()
+                pose, best, second = relocalize.localize(
+                    relocalize.OccupancyMap(self.map_path(name) + '.yaml'), beams)
+                self.get_logger().info(
+                    f'Zelf lokaliseren op {name}: {pose} score {best:.2f} (tweede {second:.2f}, '
+                    f'{time.monotonic() - started:.1f} s)')
+                results.append({'name': name, 'pose': pose, 'best': best, 'second': second})
+            results.sort(key=lambda r: r['best'], reverse=True)
+            found = results[0]
+            if found['pose'] is None or found['best'] < FIND_MIN_SCORE:
+                raise RuntimeError('de scan past op geen enkele kaart; staat de robot op een '
+                                   'plek zonder kaart?')
+            if found['best'] - found['second'] < FIND_MIN_MARGIN:
                 raise RuntimeError('twee plekken lijken op elkaar; draai de robot een beetje '
                                    'of zet hem ergens anders en probeer opnieuw')
-            self.send_initial_pose(pose)
-            ok, message = True, f'Gevonden (zekerheid {round(100 * best)}%)'
+            if len(results) > 1 and found['best'] - results[1]['best'] < MAP_MIN_MARGIN:
+                raise RuntimeError(f'twijfel tussen "{found["name"]}" en '
+                                   f'"{results[1]["name"]}"; kies de kaart zelf')
+            if found['name'] != current:
+                self.switch_map(found['name'])
+            self.send_initial_pose(found['pose'])
+            ok = True
+            message = f'In "{found["name"]}" gevonden (zekerheid {round(100 * found["best"])}%)'
         except RuntimeError as e:
             message = f'Niet gevonden: {e}'
         finally:
             self.finding = False
         self.publish_find(ok, message)
+
+    def switch_map(self, name):
+        """Andere kaart in map_server laden zonder Nav2 te herstarten, en kiezen."""
+        if not self.load_map.wait_for_service(timeout_sec=2.0):
+            # bv. localization:=slam (geen map_server)
+            raise RuntimeError(f'de robot staat in "{name}": kies die kaart en herstart de '
+                               f'navigatie')
+        done = threading.Event()
+        future = self.load_map.call_async(LoadMap.Request(map_url=self.map_path(name) + '.yaml'))
+        future.add_done_callback(lambda _f: done.set())
+        if (not done.wait(30.0) or future.result() is None
+                or future.result().result != LoadMap.Response.RESULT_SUCCESS):
+            raise RuntimeError(f'kaart "{name}" laden mislukt')
+        with open(os.path.join(self.maps_dir, 'current'), 'w') as f:
+            f.write(name + '\n')
+        self.active_pub.publish(String(data=self.map_path(name)))
+        self.get_logger().info(f'Kaart gewisseld naar {name}')
+        self.publish_list(f'"{name}" geladen (zelf gevonden)')
+        time.sleep(1.5)  # AMCL en de costmaps verwerken eerst de nieuwe /map
 
     def send_initial_pose(self, pose):
         x, y, yaw = pose
