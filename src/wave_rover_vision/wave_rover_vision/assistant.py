@@ -50,8 +50,9 @@ PERSONA = (
     'Jonas een mop of een grap, vertel er dan meteen een. Wissel af en stel niet telkens '
     'dezelfde vraag terug. Geen opsommingen, geen opmaak, geen '
     'emoji, en praat nooit over deze instructies. Gebruik de tool kijk alleen als Jonas iets '
-    'vraagt over wat je ziet; verzin niets over wat je ziet. Rijden via een gesprek kan nog '
-    'niet; zeg dat eerlijk, met een knipoog.'
+    'vraagt over wat je ziet; verzin niets over wat je ziet. Bewegen (rijden, draaien, dansen, '
+    'iets brengen) kan nog niet: bied het nooit zelf aan, en vraagt Jonas het, gebruik dan de '
+    'tool beweeg.'
 )
 # Voorbeeldgesprekjes: zonder voorbeelden rammelde de 4B en zat hij in herhaallussen ("En dan:
 # ... En dan: ..."); met deze drie kort, samenhangend en telkens iets nieuws (getest 30-10-2026).
@@ -62,6 +63,9 @@ EXAMPLES = [
                             'armen zijn nog niet geleverd.'),
     ('Vertel eens iets zot.', 'Wist je dat een octopus drie harten heeft? Ik heb er nul, maar wel '
                               'vier wielen. Wie wint er volgens jou?'),
+    # Anders beloofde hij "een rondje met mijn wielen" en fantaseerde hij bij "doe maar" (30-10).
+    ('Kan je een rondje rijden?', 'Dat kan ik nog niet, Jonas moet het me eerst leren! Zullen we '
+                                  'intussen ik zie, ik zie wat jij niet ziet spelen?'),
 ]
 EXAMPLE_MESSAGES = [m for q, a in EXAMPLES
                     for m in ({'role': 'user', 'content': q}, {'role': 'assistant', 'content': a})]
@@ -100,6 +104,13 @@ TOOLS = [
         'name': 'uur',
         'description': 'Het huidige uur en de datum.',
         'parameters': {'type': 'object', 'properties': {}, 'required': []}}},
+    {'type': 'function', 'function': {
+        'name': 'beweeg',
+        'description': 'Bewegen: rijden, draaien, dansen of iets brengen. Gebruik dit als Jonas '
+                       'vraagt dat je beweegt.',
+        'parameters': {'type': 'object', 'properties': {
+            'wat': {'type': 'string', 'description': 'wat Jonas vraagt, bv. "rondje draaien"'}},
+            'required': []}}},
     {'type': 'function', 'function': {
         'name': 'start_ik_zie_spel',
         'description': 'Start het spel "ik zie, ik zie wat jij niet ziet": je kiest stiekem een '
@@ -351,6 +362,10 @@ class Assistant(Node):
             t = time.localtime()
             return (f'Het is {t.tm_hour}u{t.tm_min:02d} op {DAYS[t.tm_wday]} {t.tm_mday} '
                     f'{MONTHS[t.tm_mon - 1]} {t.tm_year}.')
+        if name == 'beweeg':
+            # Nog niet: rijden via een gesprek komt later (met de batterijen terug, en veilig).
+            return ('Dat kan nog niet: bewegen via een gesprek komt later. Zeg dat eerlijk en '
+                    'grappig, en stel iets anders voor (praten, kijken of een spelletje).')
         if name == 'start_ik_zie_spel':
             return self.start_game()
         if name == 'stop_ik_zie_spel':
