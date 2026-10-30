@@ -257,6 +257,7 @@ class Assistant(Node):
         self.game = None     # {'voorwerp': ..., 'kleur': ...} tijdens "ik zie, ik zie"
         self.recent = []     # wat Wave laatst spontaan zei (niet herhalen)
         self.told = []       # moppen die al verteld zijn
+        self.last_move = None  # laatste beweging: "en nu op <nummer>" danst opnieuw
         self.last_was_joke = False
         self.quiet_since = time.monotonic()
         self.next_chatter = self.chatter_delay()
@@ -391,6 +392,11 @@ class Assistant(Node):
         self.history.append({'role': 'user', 'content': text})
         move = 'dans' if DANCE_REQUEST.search(text) else 'rondje' if SPIN_REQUEST.search(text) else None
         song = self.find_music(text)
+        if song and not move and not PLAY_REQUEST.search(text) and self.last_move == 'dans':
+            move = 'dans'  # "en nu op <nummer>" vlak na een dansje
+        elif song and not move:
+            text = f'speel {text}'  # een nummer noemen = afspelen
+        self.last_move = move
         if move == 'dans' and song:
             title = os.path.basename(song)[:-4].replace('-', ' ')
             if self.blocked['e_stop'] or self.blocked['charging_lock']:
