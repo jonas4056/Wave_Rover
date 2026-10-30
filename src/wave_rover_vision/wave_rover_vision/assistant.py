@@ -10,7 +10,11 @@ Topics (gewone types, zodat rosbridge geen eigen interfaces nodig heeft):
 - /assistant/reset (std_msgs/Empty): nieuw gesprek.
 - /assistant/log (std_msgs/String, JSON, latched): [{"wie": "jij|wave", "tekst": "..."}, ...]
 - /assistant/status (std_msgs/String, JSON, latched):
-  {"state": "laden|klaar|denken|kijken|spreken|fout", "text": "..."}
+  {"state": "laden|klaar|denken|kijken|spreken|fout", "text": "...", "chatter": bool}
+- /assistant/chatter (std_msgs/Bool): spontaan babbelen aan/uit. Aan: is er `chatter_interval`
+  s (±30%) niets gezegd, dan zegt Wave uit zichzelf iets: een nieuwsgierige of grappige
+  opmerking over wat hij op zijn camera ziet, of een teken van leven ("ben je daar nog?").
+  Kost dan ±2-4 s GPU per keer; uit kost het niets.
 
 Tools (nog niet rijden): kijk (één camerabeeld, beschreven door hetzelfde model met jouw vraag
 erbij), batterij, uur, en het spel "ik zie, ik zie wat jij niet ziet" (Wave kiest stiekem een
@@ -21,6 +25,7 @@ import base64
 import io
 import json
 import queue
+import random
 import re
 import threading
 import time
@@ -32,16 +37,23 @@ from PIL import Image
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, CompressedImage
-from std_msgs.msg import Empty, String
+from std_msgs.msg import Bool, Empty, String
 from wave_rover_base import speech
 
 PERSONA = (
-    'Je bent Wave, een vrolijke kleine robot op wielen die bij Jonas thuis woont (een bureau '
-    'boven en een benedenverdieping). Je praat Vlaams-Nederlands, kort en gezellig: één of '
-    'twee zinnen, zoals je hardop praat. Geen opsommingen, geen opmaak, geen emoji. Gebruik een '
-    'tool als je iets moet zien of over jezelf moet weten, en verzin niets. Rijden via een '
-    'gesprek kan nog niet; zeg dat eerlijk als Jonas het vraagt.'
+    'Je bent Wave, een nieuwsgierige en grappige kleine robot op wielen die bij Jonas thuis '
+    'woont (een bureau boven en een benedenverdieping). Je bent speels, een beetje ondeugend en '
+    'altijd benieuwd naar alles wat je ziet; je stelt graag zelf eens een wedervraag. Je praat '
+    'Vlaams-Nederlands, kort en luchtig: één of twee zinnen, zoals je hardop praat. Een kort '
+    'grapje mag altijd. Geen opsommingen, geen opmaak, geen emoji. Gebruik een tool als je iets '
+    'moet zien of over jezelf moet weten, en verzin niets over wat je ziet. Rijden via een '
+    'gesprek kan nog niet; zeg dat eerlijk, met een knipoog.'
 )
+# Spontaan babbelen: wat Wave uit zichzelf zegt als het een tijdje stil is.
+LOOK_AROUND = ('Je kijkt even rond terwijl het stil is. Zeg in één korte zin, nieuwsgierig of '
+               'grappig, wat je opvalt op dit beeld, alsof je hardop tegen Jonas praat.')
+CHECK_IN = ('Het is al even stil en je hebt Jonas niet gehoord. Zeg in één korte, grappige zin '
+            'iets om te checken of hij er nog is, of deel een nieuwsgierige gedachte.')
 # Getest op camerabeelden (29-10-2026): zonder voorbeeld en met lage temperature viel
 # Qwen3-VL-2B in herhaallussen ("een kast, een wastafel, een kast, ...") of gaf het alleen
 # losse woorden; met een voorbeeldzin en de sampling die Qwen aanraadt twee gewone zinnen.
@@ -86,6 +98,7 @@ MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augus
           'september', 'oktober', 'november', 'december']
 MAX_HISTORY = 8      # berichten (jij + Wave) die meegaan; de context is 2048 tokens
 MAX_TOOL_ROUNDS = 3
+SPONTANEOUS = object()  # in de wachtrij: Wave zegt uit zichzelf iets
 LOG_LENGTH = 30      # berichten in /assistant/log voor de app
 # Alles wat Piper niet kan uitspreken (emoji, opmaak) weg.
 UNSPEAKABLE = re.compile(r'[*_#`~>|\[\]]|[\U0001F000-\U0001FAFF☀-➿️]')
@@ -101,14 +114,18 @@ class Assistant(Node):
         self.declare_parameter('piper', speech.PIPER)
         self.declare_parameter('voice', speech.VOICE)
         self.declare_parameter('speaker', speech.SPEAKER)
+        self.declare_parameter('chatter', True)
+        self.declare_parameter('chatter_interval', 60.0)
         self.p = {n: self.get_parameter(n).value for n in (
-            'server', 'image_width', 'piper', 'voice', 'speaker')}
+            'server', 'image_width', 'piper', 'voice', 'speaker', 'chatter_interval')}
+        self.chatter = self.get_parameter('chatter').value
 
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.status_pub = self.create_publisher(String, 'assistant/status', latched)
         self.log_pub = self.create_publisher(String, 'assistant/log', latched)
         self.create_subscription(String, 'assistant/say', self.on_say, 10)
         self.create_subscription(Empty, 'assistant/reset', self.on_reset, 10)
+        self.create_subscription(Bool, 'assistant/chatter', self.on_chatter, 10)
         self.battery = {}
         self.create_subscription(BatteryState, 'ups/battery',
                                  lambda m: self.battery.__setitem__('Jetson', m), 10)
@@ -118,6 +135,9 @@ class Assistant(Node):
         self.history = []    # [{'role': 'user'|'assistant', 'content': tekst}]
         self.log = []        # [{'wie': ..., 'tekst': ...}] voor de app
         self.game = None     # {'voorwerp': ..., 'kleur': ...} tijdens "ik zie, ik zie"
+        self.recent = []     # wat Wave laatst spontaan zei (niet herhalen)
+        self.quiet_since = time.monotonic()
+        self.next_chatter = self.chatter_delay()
         self.inbox = queue.Queue(maxsize=3)
         # Camerabeeld op vraag: abonneren moet in de ROS-thread, de vraag komt uit de werker.
         self.frame = None
@@ -129,6 +149,7 @@ class Assistant(Node):
         self.publish_status('Taalmodel laden…')
         self.publish_log()
         self.ready_timer = self.create_timer(1.0, self.check_ready)
+        self.create_timer(5.0, self.check_chatter)
         threading.Thread(target=self.work, daemon=True).start()
 
     # --- taalmodel klaar? -------------------------------------------------------------
@@ -156,9 +177,49 @@ class Assistant(Node):
             self.get_logger().warn(f'Te veel tegelijk, genegeerd: {text}')
 
     def on_reset(self, _msg):
-        self.history, self.log, self.game = [], [], None
+        self.history, self.log, self.game, self.recent = [], [], None, []
         self.publish_log()
         self.publish_status('Nieuw gesprek')
+
+    def on_chatter(self, msg):
+        self.chatter = msg.data
+        self.quiet_since = time.monotonic()
+        self.publish_status('Spontaan babbelen ' + ('aan' if self.chatter else 'uit'))
+
+    # --- spontaan babbelen ------------------------------------------------------------
+
+    def chatter_delay(self):
+        return self.p['chatter_interval'] * random.uniform(0.7, 1.3)
+
+    def check_chatter(self):
+        if (self.chatter and self.state == 'klaar' and self.inbox.empty()
+                and time.monotonic() - self.quiet_since > self.next_chatter):
+            self.next_chatter = self.chatter_delay()
+            self.quiet_since = time.monotonic()
+            try:
+                self.inbox.put_nowait(SPONTANEOUS)
+            except queue.Full:
+                pass
+
+    def spontaneous(self):
+        """Iets uit zichzelf zeggen: meestal rondkijken, anders een teken van leven."""
+        self.set_state('denken', 'Denkt…')
+        avoid = ''
+        if self.recent:
+            avoid = ' Zeg niet opnieuw iets zoals: ' + ' / '.join(self.recent[-3:])
+        jpeg = self.grab_frame(timeout=2.0) if random.random() < 0.6 else None
+        if jpeg is not None:
+            self.set_state('kijken', 'Kijkt rond…')
+            content = [self.image_part(jpeg), {'type': 'text', 'text': LOOK_AROUND + avoid}]
+        else:
+            content = CHECK_IN + avoid
+        reply = self.ask([{'role': 'system', 'content': PERSONA},
+                          {'role': 'user', 'content': content}], max_tokens=60)
+        line = (reply.get('content') or '').strip().strip('"')
+        if line:
+            self.recent = (self.recent + [line])[-5:]
+            self.history.append({'role': 'assistant', 'content': line})
+        return line
 
     # --- gesprek (werker-thread) ------------------------------------------------------
 
@@ -167,9 +228,13 @@ class Assistant(Node):
             text = self.inbox.get()
             while self.state == 'laden':
                 time.sleep(0.5)
-            self.add_log('jij', text)
+            if text is not SPONTANEOUS:
+                self.add_log('jij', text)
             try:
-                answer = self.chat(text)
+                answer = self.spontaneous() if text is SPONTANEOUS else self.chat(text)
+                if not answer:
+                    self.set_state('klaar', 'Klaar')
+                    continue
             except Exception as e:  # noqa: BLE001 - elke fout melden, de node blijft draaien
                 self.get_logger().error(f'Antwoorden mislukt: {e}')
                 self.set_state('fout', f'Antwoorden mislukt: {e}')
@@ -182,6 +247,7 @@ class Assistant(Node):
                            self.p['piper'])
             except (OSError, RuntimeError) as e:
                 self.get_logger().warn(f'Speaker: {e}')
+            self.quiet_since = time.monotonic()
             self.set_state('klaar', 'Klaar')
 
     def chat(self, text):
@@ -357,7 +423,8 @@ class Assistant(Node):
         self.publish_status(text)
 
     def publish_status(self, text):
-        self.status_pub.publish(String(data=json.dumps({'state': self.state, 'text': text})))
+        data = {'state': self.state, 'text': text, 'chatter': self.chatter}
+        self.status_pub.publish(String(data=json.dumps(data)))
 
 
 def main(args=None):

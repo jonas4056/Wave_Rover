@@ -16,8 +16,10 @@ const TalkCard = (() => {
     klaar: '',
   };
   const INTRO = logEl.innerHTML;
+  const chatterBtn = document.getElementById('chat-chatter');
   let sayTopic = null;
   let resetTopic = null;
+  let chatterTopic = null;
   let state = '';
   let pending = [];  // berichten die wachten tot het taalmodel geladen is
   let pendingTimer = null;
@@ -52,6 +54,9 @@ const TalkCard = (() => {
   document.getElementById('chat-reset').addEventListener('click', () => {
     if (resetTopic) resetTopic.publish({});
   });
+  chatterBtn.addEventListener('click', () => {
+    if (chatterTopic) chatterTopic.publish({ data: !chatterBtn.classList.contains('on') });
+  });
 
   function showLog(entries) {
     if (!entries.length) {
@@ -70,6 +75,7 @@ const TalkCard = (() => {
   function onStatus(msg) {
     const s = JSON.parse(msg.data);
     state = s.state;
+    if (s.chatter !== undefined) chatterBtn.classList.toggle('on', s.chatter);
     status.textContent = s.state in STATUS_TEXT ? STATUS_TEXT[s.state] : s.text;
     if (s.state === 'klaar' && pending.length) {
       pending.forEach((text) => sayTopic.publish({ data: text }));
@@ -84,6 +90,7 @@ const TalkCard = (() => {
       .subscribe(onStatus);
     sayTopic = new ROSLIB.Topic({ ros, name: '/assistant/say', messageType: 'std_msgs/msg/String' });
     resetTopic = new ROSLIB.Topic({ ros, name: '/assistant/reset', messageType: 'std_msgs/msg/Empty' });
+    chatterTopic = new ROSLIB.Topic({ ros, name: '/assistant/chatter', messageType: 'std_msgs/msg/Bool' });
   }
 
   return { start };

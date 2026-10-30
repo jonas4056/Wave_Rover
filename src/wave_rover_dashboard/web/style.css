@@ -645,6 +645,24 @@ button {
   margin-bottom: 10px;
 }
 
+.chat-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-2);
+  font-weight: 600;
+}
+
+.chat-option small {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .chat-quick button {
   padding: 6px 12px;
   border-radius: 999px;
