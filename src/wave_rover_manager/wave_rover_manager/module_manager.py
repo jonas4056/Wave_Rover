@@ -29,6 +29,8 @@ Interface (bruikbaar vanaf de terminal en later vanaf het dashboard):
   Bij starten worden de modules uit `conflicts` gestopt en die uit `requires` eerst
   gestart; bij stoppen worden de modules die ervan afhangen eerst gestopt.
 - service  /modules/stop_all  (std_srvs/Trigger): alle modules stoppen (robot afsluiten).
+- topic    /system/status  (std_msgs/String, JSON, om de 2 s): CPU, geheugen, GPU, temperatuur,
+  vermogen en per module CPU/geheugen (system_status.py). Alleen als iemand meekijkt.
 - topic    /modules/status  (std_msgs/String, JSON, transient local):
   {"lidar": {"state": "aan", "description": "..."}, ...}
   Mogelijke states: uit, start, aan, stopt, fout.
@@ -50,6 +52,8 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from rosidl_runtime_py.utilities import get_message
 from std_msgs.msg import String
 from std_srvs.srv import SetBool, Trigger
+
+from wave_rover_manager.system_status import SystemStatus
 
 STOP_TIMEOUT = 10.0
 # Zo lang moet een module draaien voor ze als "aan" geldt.
@@ -107,6 +111,9 @@ class ModuleManager(Node):
                     lambda _msg, m=module: setattr(m, 'last_health', time.monotonic()),
                     qos_profile_sensor_data)
         self.create_timer(1.0, self.update_states)
+        self.system = SystemStatus()
+        self.system_pub = self.create_publisher(String, 'system/status', 1)
+        self.create_timer(2.0, self.publish_system)
         self.get_logger().info(f'Modules: {", ".join(self.modules)}')
         self.publish_status()
 
@@ -253,6 +260,21 @@ class ModuleManager(Node):
                     changed = True
         if changed:
             self.publish_status()
+
+    def publish_system(self):
+        """Toestand van de Jetson, alleen als iemand kijkt (paneel Modules in de app)."""
+        if self.count_subscribers('system/status') == 0:
+            return
+        groups = {}
+        with self.lock:
+            for module in self.modules.values():
+                if module.process and module.process.poll() is None:
+                    try:
+                        groups[module.name] = os.getpgid(module.process.pid)
+                    except OSError:
+                        pass
+        data = self.system.read(groups, time.monotonic())
+        self.system_pub.publish(String(data=json.dumps(data)))
 
     def publish_status(self):
         with self.lock:

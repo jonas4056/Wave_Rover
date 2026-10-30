@@ -479,6 +479,58 @@ button {
 
 .joystick.disabled { opacity: 0.4; }
 
+/* Toestand van de Jetson (paneel Modules) */
+.sys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sys-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--card-2);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sys-item b {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.bar {
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--ok);
+  transition: width 0.4s;
+}
+
+.bar i.warn { background: var(--warn); }
+.bar i.bad { background: var(--bad); }
+
+.sys-meta {
+  margin: 8px 0 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.module-use {
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
 /* Modules */
 .modules {
   list-style: none;

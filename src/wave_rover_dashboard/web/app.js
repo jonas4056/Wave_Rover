@@ -101,6 +101,7 @@ function subscribeAll() {
   cmdVel = topic('/cmd_vel_dashboard', 'geometry_msgs/msg/TwistStamped');
   estopService = new ROSLIB.Service({ ros, name: '/e_stop/set', serviceType: 'std_srvs/srv/SetBool' });
   if (cameraOn) setCamera(true);  // na herverbinding opnieuw abonneren
+  if (openPanel === 'modules') watchSystem(true);  // na herverbinding opnieuw volgen
   MapView.start(ros);
   MapsCard.start(ros);
   TalkCard.start(ros);
@@ -285,6 +286,7 @@ function showPanel(name) {
     $('sheet-title').textContent = document.querySelector(`.panel[data-panel="${openPanel}"]`).dataset.title;
   }
   if (previous === 'drive' && openPanel !== 'drive') stopDriving();
+  if ((previous === 'modules') !== (openPanel === 'modules')) watchSystem(openPanel === 'modules');
   updateCamera();
 }
 
@@ -357,7 +359,11 @@ function showModules(modules) {
     const desc = document.createElement('div');
     desc.className = 'module-desc';
     desc.textContent = info.description;
-    text.append(title, desc);
+    const use = document.createElement('div');
+    use.className = 'module-use';
+    use.dataset.use = name;
+    use.textContent = moduleUse(name);
+    text.append(title, desc, use);
 
     const state = document.createElement('span');
     state.className = `module-state ${STATE_CLASS[info.state] || ''}`;
@@ -372,6 +378,54 @@ function showModules(modules) {
 
     li.append(text, state, toggle);
     list.append(li);
+  }
+}
+
+// --- toestand van de Jetson ----------------------------------------------------------
+
+// Alleen zolang het paneel Modules open is (module_manager meet niets als niemand kijkt).
+let systemTopic = null;
+let lastSystem = null;
+const gb = (mb) => `${(mb / 1000).toFixed(1).replace('.', ',')} GB`;
+
+function moduleUse(name) {
+  const m = lastSystem && lastSystem.modules[name];
+  if (!m) return '';
+  return `${m.cpu === null ? '–' : String(m.cpu).replace('.', ',')}% CPU · ${gb(m.mb)}`;
+}
+
+function setBar(id, pct, warnAt, badAt) {
+  const bar = $(`${id}-bar`);
+  bar.style.width = `${Math.min(100, pct || 0)}%`;
+  bar.className = pct >= badAt ? 'bad' : pct >= warnAt ? 'warn' : '';
+}
+
+function showSystem(data) {
+  lastSystem = data;
+  const ram = Math.round((100 * data.ram_used) / data.ram_total);
+  $('sys-cpu').textContent = data.cpu === null ? '–' : `${data.cpu}%`;
+  $('sys-ram').textContent = `${gb(data.ram_used)} / ${gb(data.ram_total)}`;
+  $('sys-gpu').textContent = `${data.gpu}%`;
+  setBar('sys-cpu', data.cpu, 70, 90);
+  setBar('sys-ram', ram, 85, 95);
+  setBar('sys-gpu', data.gpu, 70, 90);
+  const meta = [];
+  if (data.temp !== null) meta.push(`${data.temp} °C`);
+  if (data.power !== null) meta.push(`${String(data.power).replace('.', ',')} W`);
+  if (data.fan !== null) meta.push(`ventilator ${data.fan} tpm`);
+  meta.push(`basis ${gb(data.basis.mb)}`, `overig ${gb(data.overig_mb)}`);
+  $('sys-meta').textContent = meta.join(' · ');
+  document.querySelectorAll('[data-use]').forEach((el) => { el.textContent = moduleUse(el.dataset.use); });
+}
+
+function watchSystem(on) {
+  if (systemTopic) {
+    systemTopic.unsubscribe();
+    systemTopic = null;
+  }
+  if (on && ros && connected) {
+    systemTopic = topic('/system/status', 'std_msgs/msg/String');
+    systemTopic.subscribe((m) => showSystem(JSON.parse(m.data)));
   }
 }
 

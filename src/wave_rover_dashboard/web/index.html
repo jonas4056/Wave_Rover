@@ -169,6 +169,13 @@
         </div>
 
         <div class="panel" data-panel="modules" data-title="Modules" hidden>
+          <!-- Toestand van de Jetson: alleen gemeten zolang dit paneel open is -->
+          <div class="sys">
+            <div class="sys-item"><span>CPU</span><b id="sys-cpu">–</b><div class="bar"><i id="sys-cpu-bar"></i></div></div>
+            <div class="sys-item"><span>Geheugen</span><b id="sys-ram">–</b><div class="bar"><i id="sys-ram-bar"></i></div></div>
+            <div class="sys-item"><span>GPU</span><b id="sys-gpu">–</b><div class="bar"><i id="sys-gpu-bar"></i></div></div>
+          </div>
+          <p class="sys-meta" id="sys-meta">Meten…</p>
           <ul id="modules" class="modules"></ul>
           <button type="button" id="robot-off" class="robot-off">Robot afsluiten</button>
           <p class="hint">Zet alle modules uit en sluit de Jetson netjes af. Zet daarna de
