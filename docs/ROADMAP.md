@@ -253,6 +253,14 @@ Te controleren:
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
 ### Opgelost 30-10-2026 (na de demo van 29-10)
+- [x] Wave: Vlaamse stem rdh, levendig afgesteld (keuze uit 6 proefjes); moppenboekje (16
+      moppen, een vraag om een mop gaat altijd naar het boekje: zelf verzonnen moppen waren
+      onzin); voorbeeldgesprekjes; herhaalde zinnen weg; tool beweeg zegt eerlijk dat bewegen
+      nog niet kan. Praten werkt alleen goed met de 4B (scene en detection sluiten elkaar uit).
+      PipeWire/WirePlumber op de Jetson gemaskeerd (hielden de speaker vast: "busy")
+- [x] App: toestand van de Jetson bij Modules (CPU, geheugen, GPU, temperatuur, vermogen,
+      ventilator, CPU/geheugen per module); gemeten door module_manager alleen als iemand kijkt
+- [ ] Uitzoeken: nvargus-daemon (camera, op de host) gebruikt ±0,5 GB zodra de camera aan staat
 - [x] Stippen dreven bij stilstand weg (15° na enkele minuten, 50% van de punten op de muren):
       de odometrie draait stilstaand ±1,7°/min (gyro, rf2o) en AMCL werkt pas bij na 10 cm /
       11°. pose_saver vraagt nu bij stilstand om de 2 s `request_nomotion_update`: 5 min
