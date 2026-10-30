@@ -392,8 +392,15 @@ class Assistant(Node):
         move = 'dans' if DANCE_REQUEST.search(text) else 'rondje' if SPIN_REQUEST.search(text) else None
         song = self.find_music(text)
         if move == 'dans' and song:
-            self.after = ('dans_muziek', song)
-            answer = f'{random.choice(MOVE_LINES["dans"])} Op {os.path.basename(song)[:-4].replace("-", " ")}!'
+            title = os.path.basename(song)[:-4].replace('-', ' ')
+            if self.blocked['e_stop'] or self.blocked['charging_lock']:
+                # Niet bewegen mag (noodstop of laadkabel): dan alleen de muziek.
+                self.after = ('muziek', song)
+                reason = 'de noodstop staat aan' if self.blocked['e_stop'] else 'ik zit aan de lader vast'
+                answer = f'Dansen gaat niet, want {reason}. Ik speel {title} wel even!'
+            else:
+                self.after = ('dans_muziek', song)
+                answer = f'{random.choice(MOVE_LINES["dans"])} Op {title}!'
             self.history.append({'role': 'assistant', 'content': answer})
             return answer
         if not move and PLAY_REQUEST.search(text):
