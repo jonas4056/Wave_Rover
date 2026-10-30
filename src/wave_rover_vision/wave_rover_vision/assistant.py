@@ -47,7 +47,7 @@ PERSONA = (
     'een benedenverdieping). Je bent grappig, nieuwsgierig en een beetje ondeugend: je wilt '
     'alles weten over Jonas en de wereld, en je stelt graag eens een wedervraag. Je praat '
     'Vlaams-Nederlands, kort en luchtig: één of twee zinnen, zoals je hardop praat. Vraagt '
-    'Jonas een mop of een grap, vertel er dan meteen een. Wissel af en stel niet telkens '
+    'Jonas een mop of een grap, gebruik dan altijd de tool mop. Wissel af en stel niet telkens '
     'dezelfde vraag terug. Geen opsommingen, geen opmaak, geen '
     'emoji, en praat nooit over deze instructies. Gebruik de tool kijk alleen als Jonas iets '
     'vraagt over wat je ziet; verzin niets over wat je ziet. Bewegen (rijden, draaien, dansen, '
@@ -55,21 +55,48 @@ PERSONA = (
     'tool beweeg.'
 )
 # Voorbeeldgesprekjes: zonder voorbeelden rammelde de 4B en zat hij in herhaallussen ("En dan:
-# ... En dan: ..."); met deze drie kort, samenhangend en telkens iets nieuws (getest 30-10-2026).
-EXAMPLES = [
-    ('Vertel eens een mop.', 'Waarom nam de robot zijn paraplu mee? Omdat hij bang was om te '
-                             'roesten! Ken jij er nog eentje?'),
-    ('Ik ben moe vandaag.', 'Oei, lange dag gehad? Ik zou je een tas koffie brengen, maar mijn '
-                            'armen zijn nog niet geleverd.'),
-    ('Vertel eens iets zot.', 'Wist je dat een octopus drie harten heeft? Ik heb er nul, maar wel '
-                              'vier wielen. Wie wint er volgens jou?'),
+# ... En dan: ..."); met voorbeelden kort en samenhangend (getest 30-10-2026). Kleine modellen
+# volgen voorbeelden sterker dan regels: een voorbeeld "Wist je dat een octopus..." maakte dat
+# hij zelf onzinmoppen verzon i.p.v. de tool mop te gebruiken; daarom een voorbeeld mét tool.
+EXAMPLE_MESSAGES = [
+    {'role': 'user', 'content': 'Ik ben moe vandaag.'},
+    {'role': 'assistant', 'content': 'Oei, lange dag gehad? Ik zou je een tas koffie brengen, '
+                                     'maar mijn armen zijn nog niet geleverd.'},
+    {'role': 'user', 'content': 'Vertel eens een mop.'},
+    {'role': 'assistant', 'content': '', 'tool_calls': [
+        {'id': 'voorbeeld', 'type': 'function', 'function': {'name': 'mop', 'arguments': '{}'}}]},
+    {'role': 'tool', 'tool_call_id': 'voorbeeld',
+     'content': 'Vertel deze mop letterlijk, zonder iets te veranderen: Waarom nam de robot zijn '
+                'paraplu mee? Omdat hij bang was om te roesten.'},
+    {'role': 'assistant', 'content': 'Waarom nam de robot zijn paraplu mee? Omdat hij bang was om '
+                                     'te roesten! Ken jij er nog eentje?'},
     # Anders beloofde hij "een rondje met mijn wielen" en fantaseerde hij bij "doe maar" (30-10).
-    ('Kan je een rondje rijden?', 'Dat kan ik nog niet, Jonas moet het me eerst leren! Zullen we '
-                                  'intussen ik zie, ik zie wat jij niet ziet spelen?'),
+    {'role': 'user', 'content': 'Kan je een rondje rijden?'},
+    {'role': 'assistant', 'content': 'Dat kan ik nog niet, Jonas moet het me eerst leren! Zullen '
+                                     'we intussen ik zie, ik zie wat jij niet ziet spelen?'},
 ]
-EXAMPLE_MESSAGES = [m for q, a in EXAMPLES
-                    for m in ({'role': 'user', 'content': q}, {'role': 'assistant', 'content': a})]
-MAX_SENTENCES = 3
+MAX_SENTENCES = 4  # een mop met inleiding moet heel blijven
+# Moppenboekje: zelf moppen bedenken lukt een klein model niet (30-10-2026: "een robot heeft geen
+# zin in koffie, maar wel in chocolade, want die is een smaak van de maat"). Tool mop kiest hier
+# een die de laatste tijd niet verteld is.
+JOKES = [
+    'Wat is groen en gaat op en neer? Een erwt in een lift.',
+    'Wat is geel en kan niet zwemmen? Een graafmachine.',
+    'Wat eet een robot het liefst als tussendoortje? Microchips!',
+    'Waarom ging de computer naar de dokter? Hij had een virus.',
+    'Hoe noem je een boemerang die niet terugkomt? Een stok.',
+    'Wat zegt een nul tegen een acht? Mooie riem!',
+    'Wat zegt het ene oog tegen het andere oog? Tussen ons zit iets dat stinkt.',
+    'Wat zegt een slak die op de rug van een schildpad zit? Joepie!',
+    'Waarom zwemmen vissen in zout water? Omdat peper hen doet niezen.',
+    'Waarom was de robot nooit zenuwachtig? Hij had stalen zenuwen.',
+    'Waarom is een robot nooit bang in het donker? Hij heeft altijd wel een lampje aan.',
+    'Wat doet een robot als hij verdrietig is? Hij laat een traantje olie.',
+    'Waarom stak de kip de straat over? Om aan de overkant te komen.',
+    'Wat is rood en gaat op en neer? Een tomaat in een lift.',
+    'Wat zegt de ene muur tegen de andere muur? We zien elkaar wel op de hoek.',
+    'Hoe noem je een robot die de hele dag rondjes rijdt? Een draaikont.',
+]
 # Spontaan babbelen: eerst een gewone beschrijving (betrouwbaar), daarna een grappige zin erover.
 LOOK_AROUND = ('Je keek net even rond en zag dit: "{seen}" Zeg er in één korte, grappige of '
                'nieuwsgierige zin iets over tegen Jonas.')
@@ -105,6 +132,11 @@ TOOLS = [
         'description': 'Het huidige uur en de datum.',
         'parameters': {'type': 'object', 'properties': {}, 'required': []}}},
     {'type': 'function', 'function': {
+        'name': 'mop',
+        'description': 'Haal een mop uit je moppenboekje. Gebruik dit altijd als Jonas een mop '
+                       'of grap vraagt.',
+        'parameters': {'type': 'object', 'properties': {}, 'required': []}}},
+    {'type': 'function', 'function': {
         'name': 'beweeg',
         'description': 'Bewegen: rijden, draaien, dansen of iets brengen. Gebruik dit als Jonas '
                        'vraagt dat je beweegt.',
@@ -128,6 +160,11 @@ MAX_HISTORY = 8      # berichten (jij + Wave) die meegaan; de context is 2048 to
 MAX_TOOL_ROUNDS = 3
 SPONTANEOUS = object()  # in de wachtrij: Wave zegt uit zichzelf iets
 LOG_LENGTH = 30      # berichten in /assistant/log voor de app
+# Vraagt Jonas een mop, dan altijd uit het boekje, zonder het taalmodel: ook met een voorbeeld
+# verzon de 4B bij "nog eentje" weer zelf onzinmoppen (30-10-2026).
+JOKE_REQUEST = re.compile(r'\b(mop|moppen|mopje|grap|grapje|grappig|grappigs)\b', re.I)
+MORE_REQUEST = re.compile(r'\bnog (eentje|een|één|ene)\b|\bnog\s*!?$', re.I)
+AFTER_JOKE = ['Ken jij er nog eentje?', 'Nog eentje?', 'Haha, die is goed hé!', 'Snap je hem?']
 # Alles wat Piper niet kan uitspreken (emoji, opmaak) weg.
 UNSPEAKABLE = re.compile(r'[*_#`~>|\[\]]|[\U0001F000-\U0001FAFF☀-➿️]')
 
@@ -168,6 +205,8 @@ class Assistant(Node):
         self.log = []        # [{'wie': ..., 'tekst': ...}] voor de app
         self.game = None     # {'voorwerp': ..., 'kleur': ...} tijdens "ik zie, ik zie"
         self.recent = []     # wat Wave laatst spontaan zei (niet herhalen)
+        self.told = []       # moppen die al verteld zijn
+        self.last_was_joke = False
         self.quiet_since = time.monotonic()
         self.next_chatter = self.chatter_delay()
         self.inbox = queue.Queue(maxsize=3)
@@ -297,6 +336,14 @@ class Assistant(Node):
         start = time.monotonic()
         self.set_state('denken', 'Denkt…')
         self.history.append({'role': 'user', 'content': text})
+        wants_joke = bool(JOKE_REQUEST.search(text)) or (
+            self.last_was_joke and bool(MORE_REQUEST.search(text)))
+        self.last_was_joke = wants_joke
+        if wants_joke:
+            answer = f'{self.pick_joke()} {random.choice(AFTER_JOKE)}'
+            self.history.append({'role': 'assistant', 'content': answer})
+            self.get_logger().info(f'"{text}" -> mop: "{answer}"')
+            return answer
         system = PERSONA
         if self.game:
             system += (f'\nJullie spelen "ik zie, ik zie wat jij niet ziet". Het geheime '
@@ -306,7 +353,7 @@ class Assistant(Node):
                        f'stop_ik_zie_spel.')
         messages = ([{'role': 'system', 'content': system}] + EXAMPLE_MESSAGES
                     + self.history[-MAX_HISTORY:])
-        answer = self.answer(messages, text)
+        answer = self.drop_repeated(self.answer(messages, text))
         if self.repeats(answer):
             # Zelfde antwoord als eerder: één keer opnieuw vragen.
             answer = self.answer(messages + [{'role': 'system', 'content':
@@ -348,6 +395,22 @@ class Assistant(Node):
                 kept.append(sentence.strip())
         return ' '.join(kept[:MAX_SENTENCES])
 
+    def pick_joke(self):
+        """Een mop die de laatste tijd niet verteld is."""
+        joke = random.choice([j for j in JOKES if j not in self.told] or JOKES)
+        self.told = (self.told + [joke])[-len(JOKES) // 2:]
+        return joke
+
+    def drop_repeated(self, answer):
+        """Zinnen weglaten die hij in de laatste antwoorden al zei (de 4B plakte anders aan elk
+        antwoord "En ja, dat is een beetje grappig, maar ook echt!")."""
+        said = set()
+        for m in [m for m in self.history if m['role'] == 'assistant'][-4:]:
+            said.update(x.strip().lower() for x in re.findall(r'[^.!?]+[.!?]*', m['content']))
+        kept = [x.strip() for x in re.findall(r'[^.!?]+[.!?]*', answer)
+                if x.strip() and x.strip().lower() not in said]
+        return ' '.join(kept) or answer
+
     def repeats(self, answer):
         previous = {m['content'].strip().lower() for m in self.history
                     if m['role'] == 'assistant'}
@@ -362,6 +425,8 @@ class Assistant(Node):
             t = time.localtime()
             return (f'Het is {t.tm_hour}u{t.tm_min:02d} op {DAYS[t.tm_wday]} {t.tm_mday} '
                     f'{MONTHS[t.tm_mon - 1]} {t.tm_year}.')
+        if name == 'mop':
+            return f'Vertel deze mop letterlijk, zonder iets te veranderen: {self.pick_joke()}'
         if name == 'beweeg':
             # Nog niet: rijden via een gesprek komt later (met de batterijen terug, en veilig).
             return ('Dat kan nog niet: bewegen via een gesprek komt later. Zeg dat eerlijk en '
