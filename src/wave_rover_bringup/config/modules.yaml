@@ -55,7 +55,7 @@ modules:
     launch: floor_obstacles.launch.py
     requires: [camera]
   scene:
-    description: Vertelt wat de camera ziet (beeldtaalmodel op de GPU, ±3,4 GB) via de speaker
+    description: Praten met Wave en vertellen wat de camera ziet (taalmodel op de GPU, 2,6-3,4 GB)
     package: wave_rover_bringup
     launch: scene.launch.py
     requires: [camera]

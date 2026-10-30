@@ -2,7 +2,7 @@
 
 say() blokkeert tot de tekst uitgesproken is (Piper rekent ±1 s voor een zin van 6 s, aplay
 speelt meteen af) en geeft een RuntimeError als de speaker er niet is. Gebruikt door
-power_guard en scene_describer (wave_rover_vision). Piper staat in het image (/opt/piper),
+power_guard en assistant (wave_rover_vision). Piper staat in het image (/opt/piper),
 de stemmen in ~/wave_rover/models/piper (scripts/download_scene_models.sh).
 """
 import json

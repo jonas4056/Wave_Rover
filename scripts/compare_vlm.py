@@ -2,7 +2,7 @@
 """Vergelijkt beeldtaalmodellen voor de module scene op dezelfde foto's.
 
 Start per model een tijdelijke llama-server (poort 8091, nooit twee tegelijk: zet de module
-scene eerst uit) en stelt per foto dezelfde vragen als scene_describer: twee beschrijvingen,
+scene eerst uit) en stelt per foto dezelfde vragen als assistant (tool kijk): twee beschrijvingen,
 een vrije vraag en een kader rond een voorwerp. Meet de tijd per antwoord en het geheugen.
 In de container uitvoeren:
 
@@ -21,7 +21,8 @@ import time
 import urllib.error
 import urllib.request
 
-from wave_rover_vision.scene_describer import QWEN_SAMPLING, SYSTEM_PROMPT, DEFAULT_QUESTION
+from wave_rover_vision.assistant import DEFAULT_QUESTION, QWEN_SAMPLING
+from wave_rover_vision.assistant import DESCRIBE_PROMPT as SYSTEM_PROMPT
 
 VLM_DIR = '/home/ubuntu/wave_rover/models/vlm'
 MODELS = {  # zoals in scene.launch.py

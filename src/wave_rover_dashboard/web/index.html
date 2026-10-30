@@ -144,15 +144,23 @@
           <p class="hint">Met de module detection aan verschijnen kaders rond herkende objecten.</p>
         </div>
 
-        <div class="panel" data-panel="scene" data-title="Wat zie je?" hidden>
-          <div class="map-save">
-            <input id="scene-question" class="scene-question" type="text" autocomplete="off"
-                   placeholder="optioneel een vraag, bv. welke kleur heeft de bal?">
-            <button type="button" id="scene-ask">Vertel</button>
+        <div class="panel" data-panel="talk" data-title="Praat met Wave" hidden>
+          <div id="chat-log" class="chat-log">
+            <p class="hint">Zeg of typ iets tegen Wave. Om te praten: tik op de microfoon van je
+              toetsenbord. Wave antwoordt hier en via de speaker op de robot.</p>
           </div>
-          <p id="scene-text" class="scene-text" hidden></p>
-          <p class="hint" id="scene-status">Tik op "Vertel": de robot neemt een foto en zegt via de
-            speaker wat hij ziet. De eerste keer laadt hij het taalmodel (module scene, ±20 s).</p>
+          <div class="chat-quick">
+            <button type="button" data-say="Wat zie je?">Wat zie je?</button>
+            <button type="button" data-say="Zullen we ik zie, ik zie wat jij niet ziet spelen?">Ik zie, ik zie…</button>
+            <button type="button" data-say="Hoe vol zijn je batterijen?">Batterij</button>
+            <button type="button" id="chat-reset">Nieuw gesprek</button>
+          </div>
+          <form id="chat-form" class="map-save">
+            <input id="chat-input" type="text" autocomplete="off" enterkeyhint="send"
+                   placeholder="Zeg of typ iets…">
+            <button type="submit">Stuur</button>
+          </form>
+          <p class="hint" id="chat-status"></p>
         </div>
 
         <div class="panel" data-panel="modules" data-title="Modules" hidden>
@@ -171,14 +179,14 @@
     <button type="button" data-tab="drive"><svg class="icon"><use href="#i-drive"/></svg><span>Rijden</span></button>
     <button type="button" data-tab="maps"><svg class="icon"><use href="#i-maps"/></svg><span>Kaarten</span></button>
     <button type="button" data-tab="camera"><svg class="icon"><use href="#i-camera"/></svg><span>Camera</span></button>
-    <button type="button" data-tab="scene"><svg class="icon"><use href="#i-scene"/></svg><span>Vertel</span></button>
+    <button type="button" data-tab="talk"><svg class="icon"><use href="#i-scene"/></svg><span>Praat</span></button>
     <button type="button" data-tab="modules"><svg class="icon"><use href="#i-modules"/></svg><span>Modules</span></button>
   </nav>
 
   <script src="roslib.min.js"></script>
   <script src="map.js"></script>
   <script src="maps.js"></script>
-  <script src="scene.js"></script>
+  <script src="talk.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -20,7 +20,7 @@ setup(
         'console_scripts': [
             'object_detector = wave_rover_vision.object_detector:main',
             'floor_obstacles = wave_rover_vision.floor_obstacles:main',
-            'scene_describer = wave_rover_vision.scene_describer:main',
+            'assistant = wave_rover_vision.assistant:main',
         ],
     },
 )

@@ -1,4 +1,4 @@
-"""Scènebeschrijving (module scene): beeldtaalmodel op de GPU + scene_describer.
+"""Praten met Wave en wat hij ziet (module scene): beeldtaalmodel op de GPU + assistant.
 
 llama-server (llama.cpp met CUDA, in het image gebouwd) laadt het model in het geheugen zolang
 de module aan staat en rekent alleen als er iets gevraagd wordt. Standaard (model:=auto) Qwen3-VL-4B
@@ -69,7 +69,7 @@ def generate_launch_description():
         OpaqueFunction(function=server),
         Node(
             package='wave_rover_vision',
-            executable='scene_describer',
+            executable='assistant',
             output='screen',
         ),
     ])
