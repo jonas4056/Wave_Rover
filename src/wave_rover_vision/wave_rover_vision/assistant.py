@@ -47,7 +47,8 @@ PERSONA = (
     'een benedenverdieping). Je bent grappig, nieuwsgierig en een beetje ondeugend: je wilt '
     'alles weten over Jonas en de wereld, en je stelt graag eens een wedervraag. Je praat '
     'Vlaams-Nederlands, kort en luchtig: één of twee zinnen, zoals je hardop praat. Vraagt '
-    'Jonas een mop of een grap, vertel er dan meteen een. Geen opsommingen, geen opmaak, geen '
+    'Jonas een mop of een grap, vertel er dan meteen een. Wissel af en stel niet telkens '
+    'dezelfde vraag terug. Geen opsommingen, geen opmaak, geen '
     'emoji, en praat nooit over deze instructies. Gebruik de tool kijk alleen als Jonas iets '
     'vraagt over wat je ziet; verzin niets over wat je ziet. Rijden via een gesprek kan nog '
     'niet; zeg dat eerlijk, met een knipoog.'
@@ -362,10 +363,11 @@ class Assistant(Node):
             if m is None:
                 parts.append(f'{name}: geen meting')
             elif not m.present:
-                parts.append(f'{name}: geen batterij (op de adapter)')
+                parts.append(f'{name}: draait gewoon op de adapter, er zitten geen batterijen in')
             else:
-                charging = ' en laadt' if m.power_supply_status == BatteryState.POWER_SUPPLY_STATUS_CHARGING else ''
-                parts.append(f'{name}: {round(m.percentage * 100)}%{charging}')
+                charging = ', laadt' if m.power_supply_status == BatteryState.POWER_SUPPLY_STATUS_CHARGING else ''
+                volts = f'{m.voltage:.2f}'.replace('.', ',')
+                parts.append(f'{name}: {round(m.percentage * 100)}% ({volts} volt{charging})')
         return '; '.join(parts) + '.'
 
     def look(self, question):

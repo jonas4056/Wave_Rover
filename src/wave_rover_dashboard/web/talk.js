@@ -46,6 +46,7 @@ const TalkCard = (() => {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     clearTimeout(autoSend);
+    remember(input.value.trim());
     send(input.value.trim());
     input.value = '';  // toetsenbord open laten voor het volgende
   });
@@ -55,8 +56,15 @@ const TalkCard = (() => {
   // en 2 s geen verandering meer: vanzelf versturen (zonder op Stuur te tikken).
   let autoSend = null;
   let dictated = false;
+  let lastSent = { text: '', at: 0 };
   input.addEventListener('input', (event) => {
     clearTimeout(autoSend);
+    // Na het versturen zet het dicteren van iOS de definitieve tekst nog eens in het lege
+    // vak: dat niet opnieuw versturen (anders kwam elke vraag twee keer, 30-10-2026).
+    if (input.value.trim() === lastSent.text && Date.now() - lastSent.at < 10000) {
+      input.value = '';
+      return;
+    }
     if (!input.value.trim()) {
       dictated = false;
       return;
@@ -69,6 +77,11 @@ const TalkCard = (() => {
     }
   });
   form.addEventListener('submit', () => { dictated = false; });
+
+  // Onthouden wat net verstuurd werd (zie hierboven).
+  function remember(text) {
+    lastSent = { text, at: Date.now() };
+  }
   document.querySelectorAll('[data-say]').forEach((b) => {
     b.addEventListener('click', () => send(b.dataset.say));
   });
