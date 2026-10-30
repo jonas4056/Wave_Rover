@@ -389,14 +389,19 @@ Een eerste versie kan al na fase 1. Deze fase kan dus naar voren schuiven.
 - [ ] Spraak uit: USB-luidspreker (eerst zonder microfoon) + Piper TTS; later een Jabra
       (microfoon + luidspreker) voor spraakbediening
 - [ ] Doelscenario: *"zoek de televisie en vertel me wat je erop ziet"*
-- **Richting (afgesproken 30-10-2026): hybride.** Vier blokken: oren (spraak -> tekst), brein
-  (begrijpen en een tool kiezen), handen (robotfuncties als ROS-services: rijden, naar een plaats,
-  voorwerp zoeken, beschrijven, batterij), stem (tekst -> spraak). De handen zijn altijd lokaal.
-  Lokaal brein = Qwen3-VL-4B (werkt ook zonder internet/hotspot, eenvoudige opdrachten); met
-  internet optioneel Claude als slimmer brein met dezelfde tools (echte gesprekken, karakter).
-  Volgorde: eerst de tools + een chatvenster in de app (tekst), dan beide breinen vergelijken,
-  dan spraak (iPhone-microfoon via HTTPS of Whisper op de GPU) en een stem met meer karakter.
-  Geheugen: navigation + floor_obstacles + Qwen-4B + Whisper ≈ 6,5 van 7,3 GB
+- **Richting (afgesproken 30-10-2026): zoveel mogelijk lokaal op de Jetson.** Vier blokken:
+  oren (spraak -> tekst), brein (begrijpen en een tool kiezen), handen (robotfuncties als
+  ROS-services: rijden, naar een plaats, voorwerp zoeken, beschrijven, batterij), stem
+  (tekst -> spraak). Alles lokaal: Qwen3-VL-4B als brein, Whisper of de iPhone als oren,
+  Piper als stem. Volgorde: eerst de tools + een chatvenster in de app (tekst), dan spraak
+  (iPhone-microfoon via HTTPS of Whisper op de GPU), dan een stem met meer karakter.
+  Geheugen: navigation + floor_obstacles + Qwen-4B + Whisper ≈ 6,5 van 7,3 GB.
+- **Claude API: niet gepland, alleen als uitzondering.** Kost apart geld (zit niet in het
+  Claude Pro-abonnement). Enkel overwegen als we lokaal echt tegen de grenzen lopen én het iets
+  bijzonders mogelijk maakt. Dan: standaard uit, **elke keer bevestiging van de gebruiker**
+  voor er iets naar internet gaat, API-sleutel alleen op de Jetson, alleen uitgaand verkeer,
+  Claude krijgt enkel nauwe robotfuncties die de Jetson zelf controleert (noodstop,
+  RC-voorrang en snelheidsgrenzen blijven gelden), niet beschikbaar op de hotspot
 
 **Inspiratie: [Pupper v3](https://pupper-v3-documentation.readthedocs.io/en/latest/)**
 (open-source robothond van Stanford). Hoe zijn AI werkt staat op
