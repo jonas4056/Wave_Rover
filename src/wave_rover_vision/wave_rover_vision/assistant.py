@@ -41,6 +41,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 
+import numpy as np
 import rclpy
 from PIL import Image
 from geometry_msgs.msg import TwistStamped
@@ -203,6 +204,24 @@ MOVE_LINES = {
 }
 # Alles wat Piper niet kan uitspreken (emoji, opmaak) weg.
 UNSPEAKABLE = re.compile(r'[*_#`~>|\[\]]|[\U0001F000-\U0001FAFF☀-➿️]')
+
+
+def neutral_colors(image):
+    """Paarse zweem van de camera weg, alleen voor het model (de app blijft zoals ze is).
+
+    Gemeten 30-10-2026: een witte muur gaf R 192, G 180, B 193 (7% te weinig groen), waardoor
+    het model een oranje bal "roze" noemde. Bijna-grijze, niet te donkere pixels (muren,
+    plafond, tafelpoten) worden neutraal gezet; "grijze wereld" over het hele beeld maakte alles
+    groenig. ±5 ms per beeld.
+    """
+    a = np.asarray(image, np.float32)
+    lum = a.mean(axis=2)
+    gray = (lum > 60) & ((a.max(axis=2) - a.min(axis=2)) / np.maximum(lum, 1) < 0.15)
+    if gray.sum() < 500:
+        return image  # weinig grijs in beeld: niets aan doen
+    pixels = a[gray]
+    gains = np.clip(pixels.mean() / pixels.mean(axis=0), 0.85, 1.2)
+    return Image.fromarray(np.clip(a * gains, 0, 255).astype(np.uint8))
 
 
 class Assistant(Node):
@@ -736,7 +755,7 @@ class Assistant(Node):
         if image.width > width:
             image = image.resize((width, round(image.height * width / image.width)))
         out = io.BytesIO()
-        image.convert('RGB').save(out, 'JPEG', quality=85)
+        neutral_colors(image.convert('RGB')).save(out, 'JPEG', quality=85)
         return out.getvalue()
 
     @staticmethod
