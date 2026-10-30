@@ -19,8 +19,10 @@ from launch_ros.actions import Node
 VLM_DIR = '/home/ubuntu/wave_rover/models/vlm'
 # model:=auto kiest de 4B alleen met zoveel vrij geheugen (MB) bij het starten. Op 30-10-2026
 # met navigation, detection, floor_obstacles en de 4B tegelijk: OOM-killer stopte llama-server
-# toen Piper wou spreken (4,1 GB), en de GPU gedeeld door drie modellen: 12 s per antwoord.
-AUTO_4B_MIN_AVAILABLE = 4800
+# toen Piper wou spreken (4,1 GB, de promptcache groeide per vraag), en de GPU gedeeld door drie
+# modellen: 12 s per antwoord. Zonder promptcache blijft de 4B op ±3,4 GB: 4200 laat ±0,8 GB
+# marge (4800 was te streng: met alleen camera aan koos hij de 2B, die niet kan praten).
+AUTO_4B_MIN_AVAILABLE = 4200
 MODELS = {
     'qwen3vl-2b': ('Qwen3VL-2B-Instruct-Q4_K_M.gguf', 'mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf'),
     'qwen3vl-4b': ('Qwen3VL-4B-Instruct-Q4_K_M.gguf', 'mmproj-Qwen3VL-4B-Instruct-Q8_0.gguf'),
