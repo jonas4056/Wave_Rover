@@ -124,7 +124,15 @@ button {
   text-overflow: ellipsis;
 }
 
-.stat-value { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+/* Nooit over twee regels: anders wordt de bovenbalk hoger en springt de kaart. */
+.stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .estop {
   grid-area: stop;
@@ -207,6 +215,15 @@ button {
   color: #fff;
   font-weight: 400;
   animation: pulse 1s ease-in-out infinite alternate;
+}
+
+.poweroff-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(64, 156, 255, 0.94);
+  color: #fff;
+  font-weight: 400;
 }
 
 @keyframes pulse {
@@ -478,6 +495,16 @@ button {
 }
 
 .modules li:first-child { border-top: 0; }
+
+.robot-off {
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px;
+  border-radius: 10px;
+  background: rgba(242, 92, 92, 0.2);
+  color: var(--bad);
+  font-weight: 700;
+}
 
 .module-info { flex: 1; min-width: 0; }
 .module-name { font-weight: 600; }

@@ -59,6 +59,11 @@
         <strong>Batterij Jetson bijna leeg</strong>
         <span>Afsluiten over <b id="shutdown-seconds">60</b> s. Steek de adapter in om te annuleren.</span>
       </div>
+      <div id="poweroff-banner" class="banner poweroff-banner" role="status" hidden>
+        <strong>Robot sluit af…</strong>
+        <span>Wacht tot hij uit is en zet dan de schakelaar van de UPS en het knopje op het
+          chassis uit.</span>
+      </div>
       <div id="estop-state" class="banner estop-state" hidden>
         <span>Noodstop actief</span>
         <button id="estop-release" type="button">Vrijgeven</button>
@@ -151,6 +156,9 @@
 
         <div class="panel" data-panel="modules" data-title="Modules" hidden>
           <ul id="modules" class="modules"></ul>
+          <button type="button" id="robot-off" class="robot-off">Robot afsluiten</button>
+          <p class="hint">Zet alle modules uit en sluit de Jetson netjes af. Zet daarna de
+            schakelaar van de UPS en het knopje op het chassis uit.</p>
         </div>
 
       </div>

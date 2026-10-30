@@ -15,6 +15,7 @@ block_when_charging false.
 """
 import fcntl
 import os
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -30,6 +31,8 @@ REG_BUS = 0x02
 SHUNT_OHM = 0.01
 # Boven deze spanning meet de UPS de adapter, niet de batterij.
 MAX_PACK_VOLTAGE = 12.8
+# Zo lang na een meting boven MAX_PACK_VOLTAGE blijft het 'geen batterij' (zie publish_ups).
+ADAPTER_HOLD = 30.0
 UNPLUGGED_CURRENT = -0.15  # A; daaronder ontlaadt de batterij: de kabel is eruit
 
 
@@ -75,6 +78,7 @@ class BatteryMonitor(Node):
         self.unplugged_count = 0
         self.locked = None
         self.warned = {'jetson': False, 'chassis': False}
+        self.adapter_seen = None  # laatste meting van de adapter (geen batterij), monotonic
 
     def check_low(self, name, pct, discharging):
         low = discharging and pct < self.warn_pct
@@ -103,7 +107,14 @@ class BatteryMonitor(Node):
         msg.current = current
         # Een 3S-pakket haalt hoogstens ~12,6 V. Meet de UPS meer, dan meet hij de adapter:
         # geen batterij geplaatst, of de beveiliging heeft ze losgekoppeld (bv. één cel te leeg).
-        msg.present = 5.0 < voltage < MAX_PACK_VOLTAGE
+        # Zonder batterij schommelt die meting (12,4-13,6 V): na een meting boven
+        # MAX_PACK_VOLTAGE nog ADAPTER_HOLD s 'geen batterij', anders wisselde de app telkens
+        # tussen een percentage en 'geen batterij' (30-10-2026).
+        now = time.monotonic()
+        if voltage >= MAX_PACK_VOLTAGE:
+            self.adapter_seen = now
+        recent_adapter = self.adapter_seen is not None and now - self.adapter_seen < ADAPTER_HOLD
+        msg.present = 5.0 < voltage < MAX_PACK_VOLTAGE and not recent_adapter
         msg.percentage = percentage(voltage) / 100.0 if msg.present else float('nan')
         msg.power_supply_technology = BatteryState.POWER_SUPPLY_TECHNOLOGY_LION
         # Zonder batterij schommelt de meting (12,4-13,6 V); niet elke dip is betrouwbaar te

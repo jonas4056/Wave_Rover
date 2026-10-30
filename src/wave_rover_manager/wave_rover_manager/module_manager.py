@@ -28,6 +28,7 @@ Interface (bruikbaar vanaf de terminal en later vanaf het dashboard):
 - service  /modules/<naam>/enable  (std_srvs/SetBool): true = starten, false = stoppen.
   Bij starten worden de modules uit `conflicts` gestopt en die uit `requires` eerst
   gestart; bij stoppen worden de modules die ervan afhangen eerst gestopt.
+- service  /modules/stop_all  (std_srvs/Trigger): alle modules stoppen (robot afsluiten).
 - topic    /modules/status  (std_msgs/String, JSON, transient local):
   {"lidar": {"state": "aan", "description": "..."}, ...}
   Mogelijke states: uit, start, aan, stopt, fout.
@@ -48,7 +49,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from rosidl_runtime_py.utilities import get_message
 from std_msgs.msg import String
-from std_srvs.srv import SetBool
+from std_srvs.srv import SetBool, Trigger
 
 STOP_TIMEOUT = 10.0
 # Zo lang moet een module draaien voor ze als "aan" geldt.
@@ -96,6 +97,7 @@ class ModuleManager(Node):
         for name in self.modules:
             self.create_service(SetBool, f'modules/{name}/enable',
                                 lambda req, resp, n=name: self.on_enable(n, req, resp))
+        self.create_service(Trigger, 'modules/stop_all', self.on_stop_all)
 
         for module in self.modules.values():
             self.run_on_stop(module)
@@ -123,6 +125,13 @@ class ModuleManager(Node):
             response.success = False
             response.message = str(e)
         self.publish_status()
+        return response
+
+    def on_stop_all(self, _request, response):
+        self.stop_all()
+        self.publish_status()
+        response.success = True
+        response.message = 'Alle modules gestopt'
         return response
 
     # --- starten en stoppen -------------------------------------------------------

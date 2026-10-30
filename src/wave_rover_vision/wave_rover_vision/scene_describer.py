@@ -12,7 +12,6 @@ Status en antwoord op /scene/status (std_msgs/String, JSON, latched):
 import base64
 import io
 import json
-import subprocess
 import threading
 import time
 import urllib.error
@@ -24,6 +23,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
+from wave_rover_base import speech
 
 # Getest op een camerabeeld (29-10-2026): zonder voorbeeld en met lage temperature viel
 # Qwen3-VL-2B in herhaallussen ("een kast, een wastafel, een kast, ...") of gaf het alleen
@@ -50,10 +50,9 @@ class SceneDescriber(Node):
         # Kleiner beeld = minder beeldtokens = sneller; 640 px is genoeg voor een beschrijving.
         self.declare_parameter('image_width', 640)
         self.declare_parameter('max_tokens', 100)
-        self.declare_parameter('piper', '/opt/piper/piper')
-        self.declare_parameter('voice', '/home/ubuntu/wave_rover/models/piper/nl_BE-nathalie-medium.onnx')
-        # ALSA-naam van de USB-speaker ("USB2.0 Device" -> kaart Device).
-        self.declare_parameter('speaker', 'plughw:CARD=Device,DEV=0')
+        self.declare_parameter('piper', speech.PIPER)
+        self.declare_parameter('voice', speech.VOICE)
+        self.declare_parameter('speaker', speech.SPEAKER)
         self.p = {n: self.get_parameter(n).value for n in (
             'server', 'image_width', 'max_tokens', 'piper', 'voice', 'speaker')}
 
@@ -124,7 +123,7 @@ class SceneDescriber(Node):
             self.get_logger().info(f'Beschrijving ({seconds:.1f} s): {text}')
             self.state = 'spreken'
             self.publish_status(text, seconds)
-            self.speak(text)
+            speech.say(text, self.p['voice'], self.p['speaker'], self.p['piper'])
             self.done('klaar', text, seconds)
         except Exception as e:  # noqa: BLE001 - elke fout melden, de module blijft draaien
             self.get_logger().error(f'Beschrijven mislukt: {e}')
@@ -163,24 +162,6 @@ class SceneDescriber(Node):
             end = max(text.rfind(c) for c in '.!?')
             text = text[:end + 1] if end > 0 else ' '.join(text.split()[:30]) + '.'
         return text
-
-    def speak(self, text):
-        """Piper maakt ruwe audio (16 bit mono), aplay speelt ze meteen af."""
-        with open(self.p['voice'] + '.json') as f:
-            rate = json.load(f)['audio']['sample_rate']
-        piper = subprocess.Popen(
-            [self.p['piper'], '--model', self.p['voice'], '--output-raw'],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        aplay = subprocess.Popen(
-            ['aplay', '-q', '-D', self.p['speaker'], '-r', str(rate), '-f', 'S16_LE', '-c', '1',
-             '-t', 'raw'], stdin=piper.stdout, stderr=subprocess.PIPE)
-        piper.stdout.close()  # aplay is nu de enige lezer
-        piper.stdin.write(text.replace('\n', ' ').encode() + b'\n')
-        piper.stdin.close()
-        _, err = aplay.communicate(timeout=120)
-        piper.wait(timeout=10)
-        if aplay.returncode != 0:
-            raise RuntimeError(f'speaker: {err.decode().strip() or aplay.returncode}')
 
     def done(self, state, text, seconds=None):
         self.state = 'klaar' if state == 'klaar' else 'fout'

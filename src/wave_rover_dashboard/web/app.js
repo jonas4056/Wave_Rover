@@ -54,6 +54,7 @@ function connect() {
 
   ros.on('connection', () => {
     connected = true;
+    $('poweroff-banner').hidden = true;
     setConnection('online', 'verbonden');
     reloadIfUpdated();
     subscribeAll();
@@ -105,11 +106,12 @@ function showBattery(which, msg) {
   const sub = $(`bat-${which}-sub`);
   const pct = Math.round(msg.percentage * 100);
   if (!msg.present || Number.isNaN(pct)) {
-    // UPS: spanning boven een vol pakket = adapter gemeten, batterij afwezig of losgekoppeld.
-    const disconnected = which === 'ups' && msg.voltage > 12.8;
-    value.textContent = disconnected ? 'geen batterij' : '–';
-    value.className = `stat-value ${disconnected ? 'warn' : ''}`;
-    sub.textContent = disconnected ? 'adapter / beveiliging' : 'geen meting';
+    // UPS zonder batterij (of losgekoppeld door de beveiliging): hij meet de adapter.
+    // battery_monitor houdt dat 30 s vast, zodat dit niet heen en weer springt.
+    const adapter = which === 'ups' && msg.voltage > 5;
+    value.textContent = adapter ? 'adapter' : '–';
+    value.className = `stat-value ${adapter ? 'warn' : ''}`;
+    sub.textContent = adapter ? 'geen batterij' : 'geen meting';
     return;
   }
   // Tijdens het laden leest het percentage te hoog: dan "laadt" tonen.
@@ -385,6 +387,25 @@ function alertError(message) {
   setTimeout(() => setConnection(connected ? 'online' : 'offline',
     connected ? 'verbonden' : 'niet verbonden'), 4000);
 }
+
+// --- robot afsluiten ----------------------------------------------------------------
+
+// power_guard stopt alle modules, zegt via de speaker welke schakelaars uit moeten en zet
+// daarna de Jetson uit. Beter voor de SSD dan meteen de UPS-schakelaar uitzetten.
+$('robot-off').addEventListener('click', () => {
+  if (!ros || !connected) return;
+  if (!window.confirm('Robot afsluiten? Alle modules gaan uit en de Jetson sluit af.')) return;
+  stopDriving();
+  new ROSLIB.Service({ ros, name: '/power/shutdown', serviceType: 'std_srvs/srv/Trigger' })
+    .callService({}, (res) => {
+      if (!res.success) {
+        alertError(res.message);
+        return;
+      }
+      $('poweroff-banner').hidden = false;
+      showPanel(null);
+    }, (err) => alertError(err));
+});
 
 // --- rijden -------------------------------------------------------------------------
 
