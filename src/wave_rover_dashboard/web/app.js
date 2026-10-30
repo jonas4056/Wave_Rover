@@ -48,6 +48,15 @@ function reloadIfUpdated() {
     .catch(() => {});
 }
 
+// Ook als de app open blijft: bij het terug openen en elke minuut kijken, maar niet herladen
+// terwijl je met de joystick rijdt.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) reloadIfUpdated();
+});
+setInterval(() => {
+  if (!document.hidden && driveTimer === null) reloadIfUpdated();
+}, 60000);
+
 function connect() {
   setConnection('connecting', 'verbinden…');
   ros = new ROSLIB.Ros({ url: ROSBRIDGE_URL });

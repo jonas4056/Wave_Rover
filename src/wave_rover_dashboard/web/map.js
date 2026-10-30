@@ -276,8 +276,8 @@ const MapView = (() => {
   }
 
   const HINTS = {
-    goal: 'Tik op de kaart waar hij heen moet; sleep voor de richting.',
-    initial: 'Tik waar de robot staat; sleep in de richting waarin hij kijkt.',
+    goal: 'Tik op de kaart waar hij heen moet; sleep voor de richting. Nog eens op Doel = annuleren.',
+    initial: 'Tik waar de robot staat; sleep in de richting waarin hij kijkt. Nog eens op Start = annuleren.',
   };
 
   function setMode(newMode) {
@@ -289,8 +289,9 @@ const MapView = (() => {
     hintEl.hidden = !HINTS[mode];
   }
 
+  // Doel en Start zijn aan/uit: nog eens tikken = terug naar gewoon verschuiven.
   document.querySelectorAll('.map-tools [data-mode]').forEach((b) => {
-    b.addEventListener('click', () => setMode(b.dataset.mode));
+    b.addEventListener('click', () => setMode(mode === b.dataset.mode ? 'pan' : b.dataset.mode));
   });
 
   document.getElementById('nav-cancel').addEventListener('click', () => {
