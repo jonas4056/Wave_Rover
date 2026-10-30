@@ -253,6 +253,9 @@ Te controleren:
 - `scripts/status.sh` aan het begin van elke sessie (batterijen, modules, NVMe, boots).
 
 ### Opgelost 30-10-2026 (na de demo van 29-10)
+- [x] Kaarten opgeruimd: `bureau` (was `livingauto5`, boven) en `beneden` (was `benedenauto`,
+      zelf verkend 29-10). Oude kaarten in `~/wave_rover/maps/archief/` (terug te zetten).
+      Vergelijking 2B/4B: 4B spreekt beter Nederlands -> standaard voor scene
 - [x] App: na het wisselen van explore naar navigation bleef de kaart leeg tot de app een paar
       keer herstart was. Oorzaak: rosbridge kiest de QoS bij het abonneren; zonder publisher
       met "transient local" op dat moment krijgt hij de kaart van map_server (één keer
