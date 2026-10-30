@@ -45,38 +45,22 @@ const TalkCard = (() => {
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    clearTimeout(autoSend);
     remember(input.value.trim());
     send(input.value.trim());
     input.value = '';  // toetsenbord open laten voor het volgende
   });
 
-  // Dicteren met de iPhone: hele woorden komen in één keer binnen (typen: letter per letter),
-  // en een leesteken zet hij in het Nederlands niet altijd. Gedicteerd, of eindigend op . ? !,
-  // en 2 s geen verandering meer: vanzelf versturen (zonder op Stuur te tikken).
-  let autoSend = null;
-  let dictated = false;
+  // Versturen met de blauwe pijl van het iPhone-toetsenbord (enterkeyhint="send") of met
+  // Stuur. Vanzelf versturen na 2 s stilte is weggehaald: bij een pauze midden in een zin
+  // vertrok dan een half bericht (30-10-2026).
+  // Na het versturen zet het dicteren van iOS de definitieve tekst soms nog eens in het lege
+  // vak: die tekst wissen in plaats van ze nog eens te versturen.
   let lastSent = { text: '', at: 0 };
-  input.addEventListener('input', (event) => {
-    clearTimeout(autoSend);
-    // Na het versturen zet het dicteren van iOS de definitieve tekst nog eens in het lege
-    // vak: dat niet opnieuw versturen (anders kwam elke vraag twee keer, 30-10-2026).
+  input.addEventListener('input', () => {
     if (input.value.trim() === lastSent.text && Date.now() - lastSent.at < 10000) {
       input.value = '';
-      return;
-    }
-    if (!input.value.trim()) {
-      dictated = false;
-      return;
-    }
-    if (event.inputType === 'insertText' && event.data && event.data.trim().length > 1) {
-      dictated = true;
-    }
-    if (dictated || /[.?!]\s*$/.test(input.value)) {
-      autoSend = setTimeout(() => form.requestSubmit(), 2000);
     }
   });
-  form.addEventListener('submit', () => { dictated = false; });
 
   // Onthouden wat net verstuurd werd (zie hierboven).
   function remember(text) {
