@@ -22,18 +22,22 @@ voorwerp op zijn camerabeeld) en beweeg: een dansje op een deuntje (ter plaatse 
 rijden) of een rondje draaien, via /cmd_vel_wave (twist_mux, voorrang onder de app en de
 RC-zender; noodstop en laadslot blokkeren). Rijden naar een plaats kan nog niet.
 Geluidjes (sounds.py, zelf gemaakt): liedjes op vraag ("zing eens"), en tijdens het rijden af en
-toe een wiiieeew of piepje (/cmd_vel_safe, parameter drive_sounds). Het camerabeeld wordt alleen opgehaald als er gekeken wordt;
+toe een wiiieeew of piepje (/cmd_vel_safe, parameter drive_sounds). Eigen muziek
+(scripts/add_music.sh): "speel <naam>" of "dans op <naam>". Het camerabeeld wordt alleen opgehaald als er gekeken wordt;
 zonder vragen kost de node niets.
 """
 import base64
+import glob
 import io
 import json
 import math
+import os
 import queue
 import random
 import re
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -179,6 +183,11 @@ MOVES = {
 }
 DANCE_REQUEST = re.compile(r'\b(dans|dansje|dansen|danst)\b', re.I)
 SING_REQUEST = re.compile(r'\b(zing|zingen|liedje|liedjes|muziekje|deuntje)\b', re.I)
+# Eigen muziek (scripts/add_music.sh): "speel <naam>" (begin van het nummer) of "dans op <naam>".
+MUSIC_DIR = '/home/ubuntu/wave_rover/models/muziek'
+PLAY_REQUEST = re.compile(r'\b(speel|muziek)\b', re.I)
+MUSIC_SECONDS = 30
+DANCE_ROUNDS = 2      # dansje zo vaak herhalen op muziek (2 x 4 s)
 SONG_NAMES = {'jacob': 'Vader Jacob', 'kortjakje': 'Altijd is Kortjakje ziek',
               'verjaardag': 'Happy Birthday', 'jarig': 'Happy Birthday', 'birthday': 'Happy Birthday'}
 # Geluidjes tijdens het rijden: bij vertrekken na zoveel s stilstand, met deze kans, hoogstens
@@ -381,7 +390,25 @@ class Assistant(Node):
         self.set_state('denken', 'Denkt…')
         self.history.append({'role': 'user', 'content': text})
         move = 'dans' if DANCE_REQUEST.search(text) else 'rondje' if SPIN_REQUEST.search(text) else None
-        if not move and SING_REQUEST.search(text):
+        song = self.find_music(text)
+        if move == 'dans' and song:
+            self.after = ('dans_muziek', song)
+            answer = f'{random.choice(MOVE_LINES["dans"])} Op {os.path.basename(song)[:-4].replace("-", " ")}!'
+            self.history.append({'role': 'assistant', 'content': answer})
+            return answer
+        if not move and PLAY_REQUEST.search(text):
+            names = sorted(self.music())
+            if song:
+                self.after = ('muziek', song)
+                answer = f'Daar gaan we: {os.path.basename(song)[:-4].replace("-", " ")}!'
+            elif names:
+                answer = f'Dat nummer ken ik niet. Ik heb: {", ".join(names)}.'
+            else:
+                answer = None  # geen eigen muziek: dan een piepliedje (hieronder)
+            if answer:
+                self.history.append({'role': 'assistant', 'content': answer})
+                return answer
+        if not move and (SING_REQUEST.search(text) or PLAY_REQUEST.search(text)):
             lower = text.lower()
             title = next((t for k, t in SONG_NAMES.items() if k in lower),
                          random.choice(list(sounds.SONGS)))
@@ -474,7 +501,14 @@ class Assistant(Node):
             return
         kind, name = action
         try:
-            if kind == 'move' and self.moving.acquire(blocking=False):
+            if kind == 'muziek':
+                sounds.play_file(name, MUSIC_SECONDS, self.p['speaker'])
+            elif kind == 'dans_muziek' and self.moving.acquire(blocking=False):
+                threading.Thread(target=self.run_move, args=('dans', DANCE_ROUNDS),
+                                 daemon=True).start()
+                seconds = DANCE_ROUNDS * sum(t for _, _, t in MOVES['dans'])
+                sounds.play_file(name, seconds, self.p['speaker'])
+            elif kind == 'move' and self.moving.acquire(blocking=False):
                 threading.Thread(target=self.run_move, args=(name,), daemon=True).start()
                 sounds.play(sounds.melody(sounds.DANCE_TUNE, beat=0.5) if name == 'dans'
                             else sounds.effect('wiew'), self.p['speaker'])
@@ -509,9 +543,22 @@ class Assistant(Node):
         finally:
             self.audio.release()
 
-    def run_move(self, name):
+    def music(self):
+        """Eigen nummers: {naam met spaties: pad}."""
+        return {os.path.basename(p)[:-4].replace('-', ' '): p
+                for p in glob.glob(os.path.join(MUSIC_DIR, '*.wav'))}
+
+    def find_music(self, text):
+        """Het eigen nummer waarvan alle woorden in de vraag staan (langste naam wint)."""
+        plain = unicodedata.normalize('NFKD', text.lower()).encode('ascii', 'ignore').decode()
+        words = set(re.findall(r'[a-z0-9]+', plain))
+        hits = [(len(name), path) for name, path in self.music().items()
+                if set(name.split()) <= words]
+        return max(hits)[1] if hits else None
+
+    def run_move(self, name, rounds=1):
         try:
-            for vx, wz, seconds in MOVES[name]:
+            for vx, wz, seconds in MOVES[name] * rounds:
                 end = time.monotonic() + seconds
                 while time.monotonic() < end:
                     if self.blocked['e_stop'] or self.blocked['charging_lock']:

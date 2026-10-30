@@ -109,3 +109,11 @@ def play(samples, speaker=SPEAKER):
                             input=data.getvalue(), capture_output=True, timeout=120)
     if result.returncode != 0:
         raise RuntimeError(f'speaker: {result.stderr.decode().strip() or result.returncode}')
+
+
+def play_file(path, seconds=None, speaker=SPEAKER):
+    """Speelt een WAV-bestand af (eigen muziek, scripts/add_music.sh), eventueel enkel het begin."""
+    cmd = ['aplay', '-q', '-D', speaker] + (['-d', str(int(seconds))] if seconds else []) + [path]
+    result = subprocess.run(cmd, capture_output=True, timeout=600)
+    if result.returncode != 0:
+        raise RuntimeError(f'speaker: {result.stderr.decode().strip() or result.returncode}')
