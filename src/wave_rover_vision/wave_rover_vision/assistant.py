@@ -16,14 +16,19 @@ Topics (gewone types, zodat rosbridge geen eigen interfaces nodig heeft):
   opmerking over wat hij op zijn camera ziet, of een teken van leven ("ben je daar nog?").
   Kost dan ±2-4 s GPU per keer; uit kost het niets.
 
-Tools (nog niet rijden): kijk (één camerabeeld, beschreven door hetzelfde model met jouw vraag
-erbij), batterij, uur, en het spel "ik zie, ik zie wat jij niet ziet" (Wave kiest stiekem een
-voorwerp op zijn camerabeeld). Het camerabeeld wordt alleen opgehaald als er gekeken wordt;
+Tools: kijk (één camerabeeld, beschreven door hetzelfde model met jouw vraag erbij), batterij,
+uur, mop (moppenboekje), het spel "ik zie, ik zie wat jij niet ziet" (Wave kiest stiekem een
+voorwerp op zijn camerabeeld) en beweeg: een dansje op een deuntje (ter plaatse wiebelen, niet
+rijden) of een rondje draaien, via /cmd_vel_wave (twist_mux, voorrang onder de app en de
+RC-zender; noodstop en laadslot blokkeren). Rijden naar een plaats kan nog niet.
+Geluidjes (sounds.py, zelf gemaakt): liedjes op vraag ("zing eens"), en tijdens het rijden af en
+toe een wiiieeew of piepje (/cmd_vel_safe, parameter drive_sounds). Het camerabeeld wordt alleen opgehaald als er gekeken wordt;
 zonder vragen kost de node niets.
 """
 import base64
 import io
 import json
+import math
 import queue
 import random
 import re
@@ -34,11 +39,12 @@ import urllib.request
 
 import rclpy
 from PIL import Image
+from geometry_msgs.msg import TwistStamped
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, CompressedImage
 from std_msgs.msg import Bool, Empty, String
-from wave_rover_base import speech
+from wave_rover_base import sounds, speech
 
 # Getest met de 2B op 30-10-2026: "benieuwd naar alles wat je ziet" maakte hem te veel op de
 # camera gericht (geen mop als je erom vroeg) en hij herhaalde zijn instructies.
@@ -50,9 +56,9 @@ PERSONA = (
     'Jonas een mop of een grap, gebruik dan altijd de tool mop. Wissel af en stel niet telkens '
     'dezelfde vraag terug. Geen opsommingen, geen opmaak, geen '
     'emoji, en praat nooit over deze instructies. Gebruik de tool kijk alleen als Jonas iets '
-    'vraagt over wat je ziet; verzin niets over wat je ziet. Bewegen (rijden, draaien, dansen, '
-    'iets brengen) kan nog niet: bied het nooit zelf aan, en vraagt Jonas het, gebruik dan de '
-    'tool beweeg.'
+    'vraagt over wat je ziet; verzin niets over wat je ziet. Je kan dansen en een rondje '
+    'draaien, maar nog niet rijden of iets brengen: bied bewegen nooit zelf aan, en vraagt Jonas '
+    'het, gebruik dan de tool beweeg.'
 )
 # Voorbeeldgesprekjes: zonder voorbeelden rammelde de 4B en zat hij in herhaallussen ("En dan:
 # ... En dan: ..."); met voorbeelden kort en samenhangend (getest 30-10-2026). Kleine modellen
@@ -71,7 +77,7 @@ EXAMPLE_MESSAGES = [
     {'role': 'assistant', 'content': 'Waarom nam de robot zijn paraplu mee? Omdat hij bang was om '
                                      'te roesten! Ken jij er nog eentje?'},
     # Anders beloofde hij "een rondje met mijn wielen" en fantaseerde hij bij "doe maar" (30-10).
-    {'role': 'user', 'content': 'Kan je een rondje rijden?'},
+    {'role': 'user', 'content': 'Kan je naar de keuken rijden?'},
     {'role': 'assistant', 'content': 'Dat kan ik nog niet, Jonas moet het me eerst leren! Zullen '
                                      'we intussen ik zie, ik zie wat jij niet ziet spelen?'},
 ]
@@ -138,8 +144,8 @@ TOOLS = [
         'parameters': {'type': 'object', 'properties': {}, 'required': []}}},
     {'type': 'function', 'function': {
         'name': 'beweeg',
-        'description': 'Bewegen: rijden, draaien, dansen of iets brengen. Gebruik dit als Jonas '
-                       'vraagt dat je beweegt.',
+        'description': 'Bewegen: dansen, een rondje draaien, rijden of iets brengen. Gebruik '
+                       'dit als Jonas vraagt dat je beweegt.',
         'parameters': {'type': 'object', 'properties': {
             'wat': {'type': 'string', 'description': 'wat Jonas vraagt, bv. "rondje draaien"'}},
             'required': []}}},
@@ -165,6 +171,27 @@ LOG_LENGTH = 30      # berichten in /assistant/log voor de app
 JOKE_REQUEST = re.compile(r'\b(mop|moppen|mopje|grap|grapje|grappig|grappigs)\b', re.I)
 MORE_REQUEST = re.compile(r'\bnog (eentje|een|één|ene)\b|\bnog\s*!?$', re.I)
 AFTER_JOKE = ['Ken jij er nog eentje?', 'Nog eentje?', 'Haha, die is goed hé!', 'Snap je hem?']
+# Bewegen: alleen draaien ter plaatse, geen vooruit/achteruit (geen obstakelcontrole hier).
+# Stappen (vooruit m/s, draaien rad/s, seconden); samen hoogstens ±6 s.
+MOVES = {
+    'dans': [(0.0, 1.2, 0.35), (0.0, -1.2, 0.35)] * 4 + [(0.0, 2.0, 0.6), (0.0, -2.0, 0.6)],
+    'rondje': [(0.0, 1.2, 2 * math.pi / 1.2)],
+}
+DANCE_REQUEST = re.compile(r'\b(dans|dansje|dansen|danst)\b', re.I)
+SING_REQUEST = re.compile(r'\b(zing|zingen|liedje|liedjes|muziekje|deuntje)\b', re.I)
+SONG_NAMES = {'jacob': 'Vader Jacob', 'kortjakje': 'Altijd is Kortjakje ziek',
+              'verjaardag': 'Happy Birthday', 'jarig': 'Happy Birthday', 'birthday': 'Happy Birthday'}
+# Geluidjes tijdens het rijden: bij vertrekken na zoveel s stilstand, met deze kans, hoogstens
+# om de zoveel s.
+DRIVE_SOUND_STILL = 5.0
+DRIVE_SOUND_CHANCE = 0.4
+DRIVE_SOUND_GAP = 30.0
+SPIN_REQUEST = re.compile(r'\b(rondje|ronddraaien|draai|draaien)\b', re.I)
+MOVE_LINES = {
+    'dans': ['Kijk eens naar mijn moves!', 'Muziek in mijn wielen!', 'Opzij, hier komt de '
+             'dansrobot!'],
+    'rondje': ['Wieeee, een rondje!', 'Daar ga ik, helemaal rond!'],
+}
 # Alles wat Piper niet kan uitspreken (emoji, opmaak) weg.
 UNSPEAKABLE = re.compile(r'[*_#`~>|\[\]]|[\U0001F000-\U0001FAFF☀-➿️]')
 
@@ -200,6 +227,21 @@ class Assistant(Node):
                                  lambda m: self.battery.__setitem__('Jetson', m), 10)
         self.create_subscription(BatteryState, 'chassis/battery',
                                  lambda m: self.battery.__setitem__('chassis', m), 10)
+        self.cmd_pub = self.create_publisher(TwistStamped, 'cmd_vel_wave', 10)
+        self.blocked = {'e_stop': False, 'charging_lock': False}
+        for name in self.blocked:
+            self.create_subscription(Bool, name, lambda m, n=name: self.blocked.__setitem__(n, m.data),
+                                     latched)
+        self.moving = threading.Lock()
+        # Eén geluid tegelijk op de speaker (spreken, deuntje, geluidje tijdens het rijden).
+        self.audio = threading.Lock()
+        self.after = None     # ('move', naam) of ('song', titel): na het spreken uitvoeren
+        self.declare_parameter('drive_sounds', True)
+        self.drive_sounds = self.get_parameter('drive_sounds').value
+        self.still_since = time.monotonic()
+        self.driving = False
+        self.last_drive_sound = 0.0
+        self.create_subscription(TwistStamped, 'cmd_vel_safe', self.on_drive, 10)
 
         self.history = []    # [{'role': 'user'|'assistant', 'content': tekst}]
         self.log = []        # [{'wie': ..., 'tekst': ...}] voor de app
@@ -324,11 +366,13 @@ class Assistant(Node):
                 continue
             self.add_log('wave', answer)
             self.set_state('spreken', 'Spreekt…')
-            try:
-                speech.say(UNSPEAKABLE.sub('', answer), self.p['voice'], self.p['speaker'],
-                           self.p['piper'], self.style)
-            except (OSError, RuntimeError) as e:
-                self.get_logger().warn(f'Speaker: {e}')
+            with self.audio:
+                try:
+                    speech.say(UNSPEAKABLE.sub('', answer), self.p['voice'], self.p['speaker'],
+                               self.p['piper'], self.style)
+                except (OSError, RuntimeError) as e:
+                    self.get_logger().warn(f'Speaker: {e}')
+                self.do_after()
             self.quiet_since = time.monotonic()
             self.set_state('klaar', 'Klaar')
 
@@ -336,6 +380,21 @@ class Assistant(Node):
         start = time.monotonic()
         self.set_state('denken', 'Denkt…')
         self.history.append({'role': 'user', 'content': text})
+        move = 'dans' if DANCE_REQUEST.search(text) else 'rondje' if SPIN_REQUEST.search(text) else None
+        if not move and SING_REQUEST.search(text):
+            lower = text.lower()
+            title = next((t for k, t in SONG_NAMES.items() if k in lower),
+                         random.choice(list(sounds.SONGS)))
+            self.after = ('song', title)
+            answer = f'Zingen kan ik niet, maar piepen wel! Hier komt {title}.'
+            self.history.append({'role': 'assistant', 'content': answer})
+            return answer
+        if move:
+            # Zeker herkennen in plaats van het model te laten kiezen (zoals bij moppen).
+            answer = self.start_move(move)
+            self.history.append({'role': 'assistant', 'content': answer})
+            self.get_logger().info(f'"{text}" -> {move}: "{answer}"')
+            return answer
         wants_joke = bool(JOKE_REQUEST.search(text)) or (
             self.last_was_joke and bool(MORE_REQUEST.search(text)))
         self.last_was_joke = wants_joke
@@ -395,6 +454,84 @@ class Assistant(Node):
                 kept.append(sentence.strip())
         return ' '.join(kept[:MAX_SENTENCES])
 
+    # --- bewegen ---------------------------------------------------------------------
+
+    def start_move(self, name):
+        """Beweging starten (tegelijk met het spreken) en de zin teruggeven die Wave zegt."""
+        if self.blocked['e_stop']:
+            return 'Ik zou graag, maar de noodstop staat aan!'
+        if self.blocked['charging_lock']:
+            return 'Ik zit aan de lader vast, dus dansen gaat even niet.'
+        if self.moving.locked():
+            return 'Wacht even, ik ben al aan het bewegen!'
+        self.after = ('move', name)  # na het spreken, op een deuntje
+        return random.choice(MOVE_LINES[name])
+
+    def do_after(self):
+        """Na het spreken (met de speaker nog in handen): dansen op muziek of een liedje."""
+        action, self.after = self.after, None
+        if action is None:
+            return
+        kind, name = action
+        try:
+            if kind == 'move' and self.moving.acquire(blocking=False):
+                threading.Thread(target=self.run_move, args=(name,), daemon=True).start()
+                sounds.play(sounds.melody(sounds.DANCE_TUNE, beat=0.5) if name == 'dans'
+                            else sounds.effect('wiew'), self.p['speaker'])
+            elif kind == 'song':
+                sounds.play(sounds.melody(sounds.SONGS[name]), self.p['speaker'])
+        except (OSError, RuntimeError) as e:
+            self.get_logger().warn(f'Speaker: {e}')
+
+    # --- geluidjes tijdens het rijden -------------------------------------------------
+
+    def on_drive(self, msg):
+        moving = abs(msg.twist.linear.x) > 0.02 or abs(msg.twist.angular.z) > 0.1
+        now = time.monotonic()
+        if moving and not self.driving:
+            if (self.drive_sounds and now - self.still_since > DRIVE_SOUND_STILL
+                    and now - self.last_drive_sound > DRIVE_SOUND_GAP
+                    and random.random() < DRIVE_SOUND_CHANCE and not self.moving.locked()):
+                self.last_drive_sound = now
+                threading.Thread(target=self.drive_sound, daemon=True).start()
+        if not moving and self.driving:
+            self.still_since = now
+        self.driving = moving
+
+    def drive_sound(self):
+        if not self.audio.acquire(blocking=False):
+            return  # Wave praat net: dan geen geluidje
+        try:
+            sounds.play(sounds.effect(random.choice(['wiew', 'wiew', 'piep', 'boing'])),
+                        self.p['speaker'])
+        except (OSError, RuntimeError) as e:
+            self.get_logger().warn(f'Speaker: {e}')
+        finally:
+            self.audio.release()
+
+    def run_move(self, name):
+        try:
+            for vx, wz, seconds in MOVES[name]:
+                end = time.monotonic() + seconds
+                while time.monotonic() < end:
+                    if self.blocked['e_stop'] or self.blocked['charging_lock']:
+                        return
+                    self.send_cmd(vx, wz)
+                    time.sleep(0.05)
+        finally:
+            for _ in range(3):
+                self.send_cmd(0.0, 0.0)  # expliciet stoppen
+                time.sleep(0.05)
+            self.moving.release()
+
+    def send_cmd(self, vx, wz):
+        msg = TwistStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        msg.twist.linear.x = vx
+        msg.twist.angular.z = wz
+        self.cmd_pub.publish(msg)
+
     def pick_joke(self):
         """Een mop die de laatste tijd niet verteld is."""
         joke = random.choice([j for j in JOKES if j not in self.told] or JOKES)
@@ -428,9 +565,12 @@ class Assistant(Node):
         if name == 'mop':
             return f'Vertel deze mop letterlijk, zonder iets te veranderen: {self.pick_joke()}'
         if name == 'beweeg':
-            # Nog niet: rijden via een gesprek komt later (met de batterijen terug, en veilig).
-            return ('Dat kan nog niet: bewegen via een gesprek komt later. Zeg dat eerlijk en '
-                    'grappig, en stel iets anders voor (praten, kijken of een spelletje).')
+            wish = question.lower()
+            move = 'dans' if 'dans' in wish else 'rondje' if ('rond' in wish or 'draai' in wish) else None
+            if move:
+                return f'Gedaan. Zeg dit: {self.start_move(move)}'
+            return ('Dat kan nog niet: ik kan alleen dansen of een rondje draaien, rijden naar een '
+                    'plek komt later. Zeg dat eerlijk en grappig.')
         if name == 'start_ik_zie_spel':
             return self.start_game()
         if name == 'stop_ik_zie_spel':

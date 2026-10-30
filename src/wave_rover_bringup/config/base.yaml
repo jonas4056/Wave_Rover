@@ -55,6 +55,11 @@ twist_mux:
         topic: cmd_vel_dashboard
         timeout: 0.5
         priority: 50
+      # Wave (module scene): dansje of rondje draaien op vraag; boven Nav2, onder app en RC.
+      wave:
+        topic: cmd_vel_wave
+        timeout: 0.5
+        priority: 20
       # Uitgang van Nav2 (collision_monitor). Niet cmd_vel_nav: die naam gebruikt Nav2 intern.
       nav:
         topic: cmd_vel_nav2
