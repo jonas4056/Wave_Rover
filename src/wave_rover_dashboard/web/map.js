@@ -25,7 +25,8 @@ const MapView = (() => {
   // Obstakels rond de robot (pose_saver): {points: [x1, y1, ...] in cm, time}
   const obstacles = { lidar: { points: [], time: 0 }, floor: { points: [], time: 0 } };
   const OBSTACLE_TIMEOUT = 2000;  // ms: geen nieuws (module uit) = niet meer tonen
-  let view = { scale: 40, cx: 0, cy: 0 };  // pixels per meter, wereldpunt in het midden
+  // pixels per meter, wereldpunt in het midden, draaiing van de kaart op het scherm (radialen)
+  let view = { scale: 40, cx: 0, cy: 0, rot: 0 };
   let mode = 'pan';
   let dirty = true;
   let fitted = false;
@@ -45,12 +46,20 @@ const MapView = (() => {
 
   function worldToScreen(x, y) {
     const { w, h } = size();
-    return { x: w / 2 + (x - view.cx) * view.scale, y: h / 2 - (y - view.cy) * view.scale };
+    const c = Math.cos(view.rot);
+    const s = Math.sin(view.rot);
+    const dx = x - view.cx;
+    const dy = y - view.cy;
+    return { x: w / 2 + (dx * c - dy * s) * view.scale, y: h / 2 - (dx * s + dy * c) * view.scale };
   }
 
   function screenToWorld(sx, sy) {
     const { w, h } = size();
-    return { x: view.cx + (sx - w / 2) / view.scale, y: view.cy - (sy - h / 2) / view.scale };
+    const c = Math.cos(view.rot);
+    const s = Math.sin(view.rot);
+    const rx = (sx - w / 2) / view.scale;
+    const ry = -(sy - h / 2) / view.scale;
+    return { x: view.cx + rx * c + ry * s, y: view.cy - rx * s + ry * c };
   }
 
   function yawFromQuaternion(q) {
@@ -139,7 +148,10 @@ const MapView = (() => {
     const { w, h } = size();
     const mw = mapInfo.width * mapInfo.resolution;
     const mh = mapInfo.height * mapInfo.resolution;
-    view.scale = Math.min(w / mw, h / mh) * 0.95;
+    // Afmetingen van de gedraaide kaart op het scherm.
+    const c = Math.abs(Math.cos(view.rot));
+    const s = Math.abs(Math.sin(view.rot));
+    view.scale = Math.min(w / (mw * c + mh * s), h / (mw * s + mh * c)) * 0.95;
     view.cx = mapInfo.ox + mw / 2;
     view.cy = mapInfo.oy + mh / 2;
     fitted = true;
@@ -150,7 +162,7 @@ const MapView = (() => {
     const p = worldToScreen(x, y);
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(-yaw);
+    ctx.rotate(-(yaw + view.rot));
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(length, 0);
@@ -183,10 +195,18 @@ const MapView = (() => {
         : 'Zet navigation aan bij Modules', w / 2, h / 2 + 12);
       ctx.textAlign = 'start';
     } else {
-      const topLeft = worldToScreen(mapInfo.ox, mapInfo.oy + mapInfo.height * mapInfo.resolution);
-      const span = mapInfo.resolution * view.scale;
+      // Zelfde omrekening als worldToScreen, als canvastransformatie (met draaiing).
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate(-view.rot);
+      ctx.scale(view.scale, -view.scale);
+      ctx.translate(-view.cx, -view.cy);
+      // Bovenste rij van de afbeelding = grootste y.
+      ctx.translate(mapInfo.ox, mapInfo.oy + mapInfo.height * mapInfo.resolution);
+      ctx.scale(mapInfo.resolution, -mapInfo.resolution);
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(mapImage, topLeft.x, topLeft.y, mapInfo.width * span, mapInfo.height * span);
+      ctx.drawImage(mapImage, 0, 0);
+      ctx.restore();
     }
 
     if (plan.length > 1) {
@@ -283,6 +303,43 @@ const MapView = (() => {
 
   document.getElementById('map-fit').addEventListener('click', fit);
 
+  // --- draaiing per kaart ------------------------------------------------------------
+  // Hoe je de kaart wilt zien hangt af van waar je zit (bureau: aan de pc = 180 graden).
+  // Per kaart onthouden op dit toestel; knop "Draai" = 90 graden verder.
+  const DEFAULT_ROTATION = { bureau: 180 };
+  let mapName = '';
+
+  function storedRotations() {
+    try {
+      return JSON.parse(localStorage.getItem('mapRotation') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setMapName(name) {
+    if (!name || name === mapName) return;
+    mapName = name;
+    const deg = storedRotations()[name] ?? DEFAULT_ROTATION[name] ?? 0;
+    view.rot = (deg * Math.PI) / 180;
+    fitted = false;
+    if (mapInfo) fit();
+    dirty = true;
+  }
+
+  document.getElementById('map-rotate').addEventListener('click', () => {
+    const deg = (Math.round((view.rot * 180) / Math.PI) + 90) % 360;
+    view.rot = (deg * Math.PI) / 180;
+    if (mapName) {
+      const all = storedRotations();
+      all[mapName] = deg;
+      try {
+        localStorage.setItem('mapRotation', JSON.stringify(all));
+      } catch (e) { /* privé venster: alleen voor nu */ }
+    }
+    fit();
+  });
+
   // --- gebaren ----------------------------------------------------------------------
 
   const pointers = new Map();
@@ -329,11 +386,13 @@ const MapView = (() => {
     } else if (pointers.size === 1 && gesture.pick) {
       const dx = p.x - gesture.pick.sx;
       const dy = p.y - gesture.pick.sy;
-      if (Math.hypot(dx, dy) > 10) gesture.pick.yaw = Math.atan2(-dy, dx);
+      if (Math.hypot(dx, dy) > 10) gesture.pick.yaw = Math.atan2(-dy, dx) - view.rot;
       dirty = true;
     } else if (pointers.size === 1 && gesture.last) {
-      view.cx -= (p.x - gesture.last.x) / view.scale;
-      view.cy += (p.y - gesture.last.y) / view.scale;
+      const before = screenToWorld(gesture.last.x, gesture.last.y);
+      const after = screenToWorld(p.x, p.y);
+      view.cx -= after.x - before.x;
+      view.cy -= after.y - before.y;
       gesture.last = p;
       dirty = true;
     }
@@ -380,6 +439,7 @@ const MapView = (() => {
       .subscribe(onNavStatus);
 
     topic('/localization/status', 'std_msgs/msg/String').subscribe(onFindStatus);
+    topic('/maps/list', 'std_msgs/msg/String').subscribe((m) => setMapName(JSON.parse(m.data).current));
     findTopic = topic('/localization/find', 'std_msgs/msg/Empty');
 
     goalTopic = topic('/goal_pose', 'geometry_msgs/msg/PoseStamped');
