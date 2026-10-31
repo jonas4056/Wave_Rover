@@ -17,12 +17,12 @@ Iets kleins tussendoor? Zie [Ideeën voor tussendoor](#ideeën-voor-tussendoor-n
 | Onderdeel | Details |
 |---|---|
 | Computer | Jetson Orin Nano 8 GB, JetPack 7.2 (L4T R39.2.1, Ubuntu 24.04), NVMe 1 TB |
-| Chassis | [Waveshare WAVE ROVER](https://www.waveshare.com/wiki/WAVE_ROVER), 4WD, **N20-motoren zonder encoders**, max. 1,25 m/s |
+| Chassis | [Waveshare WAVE ROVER](https://www.waveshare.com/wave-rover.htm) ([wiki](https://www.waveshare.com/wiki/WAVE_ROVER)), 4WD, **N20-motoren zonder encoders**, max. 1,25 m/s |
 | Motorsturing | ESP32 general driver board, JSON via serieel (115200 baud). `T:1` stuurt de wielsnelheid (−0,5…+0,5), `T:131` zet de feedbackstroom aan. Heeft een **9-assige IMU** en een INA219 voor de batterijspanning. |
 | RC | TBS Mambo (of TX16S) → TBS Crossfire Nano RX → UART van de Jetson (`/dev/ttyTHS1`, CRSF, 420000 baud) |
-| Lidar | Slamtec RPLidar C1 (USB, 460800 baud) |
-| Camera | CSI-camera (Argus) |
-| Spraak (tijdelijk) | Yahboom-spraakbord: herkent alleen vooraf geprogrammeerde woorden |
+| Lidar | [Slamtec RPLidar C1](https://eu.robotshop.com/products/slamtec-rplidar-c1-360-dtof-laser-scanner) (360° dToF, USB, 460800 baud) |
+| Camera | [Freenove FNK0056, 8MP-versie](https://store.freenove.com/products/fnk0056?variant=43034490962118): IMX219, CSI (Argus), mét infraroodfilter (geen NoIR). Lichte paarse zweem (witte muur R192/G180/B193, zwart oogt paars): voor het taalmodel gecorrigeerd in assistant.py |
+| Spraak (tijdelijk) | [Yahboom AI Voice Interaction Module (ASR-TTS)](https://www.yahboom.net/study/Voice_Module_ASR-TTS/): herkent alleen vooraf geprogrammeerde woorden, USB-serieel (`/dev/yahboom`, ch341) |
 | Spraak (later) | USB-microfoon en luidspreker |
 | Visualisatie | Linux-pc met ROS 2 Jazzy (native) en RViz2 |
 | Dashboard | Webapp: iPhone 18 Pro, of een oude iPhone/iPad die op de robot of op tafel ligt |
